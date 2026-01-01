@@ -1,17 +1,17 @@
-# Pocket to Obsidian Migration Toolkit
+# Pocket Link Manager
 
-A comprehensive toolkit for extracting, crawling, processing, and managing your Pocket saved articles for import into Obsidian or other knowledge management systems.
+A comprehensive toolkit for extracting, crawling, processing, and managing your Pocket saved articles. Export to Obsidian, Notion, or any knowledge management system.
 
 ## Overview
 
-This toolkit helps you migrate your Pocket bookmarks to a structured knowledge base. It provides:
+Pocket Link Manager helps you organize, analyze, and export your Pocket bookmarks. It provides:
 
 - **Data Import** - Import and merge Pocket export files
 - **URL Crawling** - Visit links, follow redirects, track status codes
 - **Content Extraction** - Convert web pages to clean markdown
 - **Database Management** - Store and query your link collection
 - **Web Interface** - Browse, search, and filter your links
-- **Export Tools** - Export to various formats for Obsidian
+- **Export Tools** - Export to various formats (Markdown, CSV, JSON) for Obsidian, Notion, or any knowledge management system
 
 ## Architecture
 
@@ -25,7 +25,7 @@ graph TB
     F --> G[Web Interface]
     F --> H[Content Extractor]
     H --> I[Markdown Files]
-    I --> J[Obsidian]
+    I --> J[Knowledge Management Systems]
     
     K[Analysis Scripts] --> E
     L[Export Tools] --> F
@@ -40,7 +40,7 @@ graph TB
 - **Web Interface** - Flask-based UI for browsing and managing links
 - **Quality Metrics** - Automatic quality scoring and accessibility tracking
 - **Tag Management** - Process and clean Pocket tags
-- **Export Capabilities** - Export filtered results to CSV or Markdown
+- **Export Capabilities** - Export filtered results to CSV, Markdown, or JSON for integration with Obsidian, Notion, or any knowledge management system
 
 ## Installation
 
@@ -55,7 +55,7 @@ graph TB
 
 ```bash
 git clone <repository-url>
-cd pocket-to-obsidian
+cd pocket-link-manager
 ```
 
 2. Install dependencies:
@@ -136,7 +136,7 @@ python scripts/analysis/analyze_crawl_results.py
 ## Project Structure
 
 ```
-pocket-to-obsidian/
+pocket-link-manager/
 ├── database/           # Database models, queries, importer
 ├── extractor/         # URL extraction and markdown conversion
 ├── web/               # Flask web application
