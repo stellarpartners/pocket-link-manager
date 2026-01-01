@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Export - Pocket Link Manager{% endblock %}
+
+{% block content %}
+<div class="export-page">
+    <div class="header-with-actions">
+        <h1><i data-lucide="send"></i> Obsidian Export</h1>
+        <div class="header-actions">
+            <span class="badge badge-info">Obsidian Sync Tool</span>
+        </div>
+    </div>
+    
+    <div class="link-content-layout">
+        <div class="main-column">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i data-lucide="settings"></i> Export Configuration</h2>
+                </div>
+                <form id="export-form">
+                    <div class="form-grid">
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="include_content" name="include_content" checked>
+                            <label for="include_content">
+                                <strong>Include extracted content</strong>
+                                <span class="text-muted small">Append the full article text to the markdown file</span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="only_accessible" name="only_accessible" checked>
+                            <label for="only_accessible">
+                                <strong>Only accessible links</strong>
+                                <span class="text-muted small">Skip links that returned 404 or other errors</span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="only_unread" name="only_unread">
+                            <label for="only_unread">
+                                <strong>Only unread links</strong>
+                                <span class="text-muted small">Exclude links that are already archived in Pocket</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: var(--spacing-lg);">
+                        <label for="vault_path">Obsidian Vault Path</label>
+                        <div class="input-with-icon">
+                            <i data-lucide="folder"></i>
+                            <input type="text" name="vault_path" id="vault_path" placeholder="C:\Users\Name\Documents\Obsidian\MyVault" style="padding-left: 2.5rem;">
+                        </div>
+                        <small class="text-muted italic">Links will be exported to a 'Pocket' folder within this vault.</small>
+                    </div>
+
+                    <div class="card-actions" style="border: none; padding: 0;">
+                        <button type="submit" class="btn btn-obsidian btn-lg">
+                            <i data-lucide="external-link"></i> Run Export to Obsidian
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card" id="export-status" style="display: none;">
+                <div class="card-header">
+                    <h2><i data-lucide="loader"></i> Export Progress</h2>
+                </div>
+                <div id="export-progress">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar spinning-bg" style="width: 100%;"></div>
+                    </div>
+                    <p class="text-center" style="margin-top: var(--spacing-md);">Preparing files for export...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-column">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i data-lucide="database"></i> Statistics</h3>
+                </div>
+                <div class="mini-stats">
+                    <div class="mini-stat-item">
+                        <label>Total Links</label>
+                        <span>{{ stats.total_links | number_format }}</span>
+                    </div>
+                    <div class="mini-stat-item">
+                        <label>Markdown Files</label>
+                        <span>{{ stats.markdown_stats.with_markdown | number_format }}</span>
+                    </div>
+                    <div class="mini-stat-item">
+                        <label>Ready for Sync</label>
+                        <span style="color: var(--obsidian-color);">{{ stats.markdown_stats.with_markdown | number_format }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3><i data-lucide="help-circle"></i> How it works</h3>
+                </div>
+                <div class="help-content small">
+                    <p>1. Ensure your links have been <strong>Crawled</strong> and <strong>Extracted</strong>.</p>
+                    <p>2. Choose which links to include using filters.</p>
+                    <p>3. Set your Obsidian Vault path.</p>
+                    <p>4. Click export to sync files.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-color);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.checkbox-group:hover {
+    border-color: var(--secondary-color);
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-top: 4px;
+    width: 18px;
+    height: 18px;
+}
+
+.checkbox-group label {
+    margin-bottom: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.input-with-icon {
+    position: relative;
+}
+
+.input-with-icon i {
+    position: absolute;
+    left: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    width: 18px;
+    height: 18px;
+}
+
+.mini-stats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.mini-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mini-stat-item span {
+    font-weight: 700;
+}
+
+.help-content p {
+    margin-bottom: var(--spacing-sm);
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    width: 100%;
+}
+
+.spinning-bg {
+    background: linear-gradient(90deg, var(--secondary-color), var(--obsidian-color), var(--secondary-color));
+    background-size: 200% 100%;
+    animation: gradientMove 2s linear infinite;
+}
+
+@keyframes gradientMove {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+}
+</style>
+
+<script>
+document.getElementById('export-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    
+    document.getElementById('export-status').style.display = 'block';
+    document.getElementById('export-form').parentElement.style.opacity = '0.5';
+    document.getElementById('export-form').parentElement.style.pointerEvents = 'none';
+    
+    // Smooth scroll to status
+    document.getElementById('export-status').scrollIntoView({ behavior: 'smooth' });
+    
+    // Simulate API call for now since backend endpoint isn't fully implemented in routes.py
+    setTimeout(() => {
+        alert('Export functionality integration in progress! The UI is ready, now connecting to the backend export service.');
+        document.getElementById('export-status').style.display = 'none';
+        document.getElementById('export-form').parentElement.style.opacity = '1';
+        document.getElementById('export-form').parentElement.style.pointerEvents = 'auto';
+    }, 2000);
+});
+</script>
+{% endblock %}

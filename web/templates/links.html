@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Links - Pocket Link Manager{% endblock %}
+
+{% block content %}
+<div class="links-page">
+    <div class="header-with-actions">
+        <h1>Links Library</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('main.add_link') }}" class="btn btn-primary">
+                <i data-lucide="plus"></i> Add New Link
+            </a>
+            <span class="badge badge-info">{{ pagination.total }} links found</span>
+        </div>
+    </div>
+    
+    {% if current_tag %}
+    <div class="current-filter">
+        <span class="filter-badge">
+            <i data-lucide="tag" size="16"></i> Tag: <strong>{{ current_tag }}</strong>
+            <a href="{{ url_for('main.links') }}" class="remove-filter"><i data-lucide="x"></i></a>
+        </span>
+    </div>
+    {% endif %}
+    
+    <div class="filters card">
+        <form method="GET" action="{{ url_for('main.links') }}" class="filter-form">
+            <div class="form-group">
+                <label for="search">Search</label>
+                <input type="text" name="search" id="search" placeholder="Title, URL, domain..." value="{{ filters.search or '' }}">
+            </div>
+            {% if current_tag %}
+            <input type="hidden" name="tag" value="{{ current_tag }}">
+            {% endif %}
+            <div class="form-group">
+                <label for="status_code">HTTP Status</label>
+                <select name="status_code" id="status_code">
+                    <option value="">All Status Codes</option>
+                    <option value="200" {% if filters.status_code == 200 %}selected{% endif %}>200 OK</option>
+                    <option value="403" {% if filters.status_code == 403 %}selected{% endif %}>403 Forbidden</option>
+                    <option value="404" {% if filters.status_code == 404 %}selected{% endif %}>404 Not Found</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="pocket_status">Pocket Status</label>
+                <select name="pocket_status" id="pocket_status">
+                    <option value="">All Status</option>
+                    <option value="unread" {% if filters.pocket_status == 'unread' %}selected{% endif %}>Unread</option>
+                    <option value="archive" {% if filters.pocket_status == 'archive' %}selected{% endif %}>Archived</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="domain">Domain</label>
+                <select name="domain" id="domain">
+                    <option value="">All Domains</option>
+                    {% for domain_stat in domain_stats %}
+                    <option value="{{ domain_stat.domain }}" {% if filters.domain == domain_stat.domain %}selected{% endif %}>
+                        {{ domain_stat.domain }} ({{ domain_stat.total }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sort_by">Sort By</label>
+                <select name="sort_by" id="sort_by">
+                    <option value="date_saved" {% if filters.sort_by == 'date_saved' %}selected{% endif %}>Date Saved</option>
+                    <option value="quality_score" {% if filters.sort_by == 'quality_score' %}selected{% endif %}>Quality Score</option>
+                    <option value="domain" {% if filters.sort_by == 'domain' %}selected{% endif %}>Domain</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sort_order">Order</label>
+                <select name="sort_order" id="sort_order">
+                    <option value="desc" {% if filters.sort_order == 'desc' %}selected{% endif %}>Newest/Highest</option>
+                    <option value="asc" {% if filters.sort_order == 'asc' %}selected{% endif %}>Oldest/Lowest</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary"><i data-lucide="filter"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+
+    <form method="POST" action="{{ url_for('main.bulk_action') }}" id="bulk-action-form" onsubmit="return confirmBulkAction()">
+        <div class="bulk-actions" id="bulk-actions-bar" style="display: none; position: sticky; top: 80px; z-index: 900; background: var(--primary-color); color: white; border: none;">
+            <div class="bulk-controls">
+                <span id="selected-count" class="selected-count" style="color: white; font-weight: 700; margin-right: var(--spacing-lg);">0 selected</span>
+                <select name="action" id="bulk-action-select" style="width: auto; background: white; color: var(--text-color);">
+                    <option value="">Choose bulk action...</option>
+                    <option value="archive">Archive Selected</option>
+                    <option value="unarchive">Unarchive Selected</option>
+                    <option value="delete">Delete Selected</option>
+                </select>
+                <button type="submit" class="btn btn-sm btn-secondary" style="background: white; border: none;">Apply to selected</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="deselectAll()" style="background: rgba(255,255,255,0.2); color: white; border: none; margin-left: auto;">Cancel</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;"><input type="checkbox" id="select-all-checkbox" onchange="toggleAll(this)"></th>
+                    <th>Link Details</th>
+                    <th>Tags</th>
+                    <th>Status</th>
+                    <th>HTTP</th>
+                    <th>Quality</th>
+                    <th>Saved</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for link in links %}
+                <tr>
+                    <td><input type="checkbox" name="link_ids" value="{{ link.id }}" class="link-checkbox" onchange="updateSelectedCount()"></td>
+                    <td>
+                        <div class="link-info">
+                            <a href="{{ url_for('main.link_detail', link_id=link.id) }}" class="link-title">
+                                {{ link.title[:80] }}{% if link.title|length > 80 %}...{% endif %}
+                            </a>
+                            <div class="link-domain-text text-muted">
+                                <i data-lucide="globe" size="12"></i> {{ link.domain }}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% set tags = link.get_tags_list() %}
+                        {% if tags %}
+                            <div class="tags-inline">
+                                {% for tag in tags[:3] %}
+                                <a href="{{ url_for('main.links', tag=tag) }}" class="tag-link">{{ tag }}</a>
+                                {% endfor %}
+                                {% if tags|length > 3 %}
+                                <span class="text-muted" title="{{ tags[3:]|join(', ') }}">+{{ tags|length - 3 }}</span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ link.pocket_status }}">
+                            {{ link.pocket_status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% set crawl = link.latest_crawl() %}
+                        {% if crawl and crawl.status_code %}
+                            <span class="status-code status-{{ (crawl.status_code // 100) }}xx">
+                                {{ crawl.status_code }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% set quality = link.quality_metric %}
+                        {% if quality %}
+                            <span class="quality-score quality-{{ 'high' if quality.quality_score >= 60 else 'medium' if quality.quality_score >= 40 else 'low' }}">
+                                {{ quality.quality_score }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted" style="font-size: 0.85rem;">{{ link.date_saved.strftime('%Y-%m-%d') if link.date_saved else '-' }}</td>
+                    <td style="text-align: right;">
+                        <div class="action-buttons-list">
+                            <a href="{{ url_for('main.link_detail', link_id=link.id) }}" class="icon-btn" title="View details"><i data-lucide="eye"></i></a>
+                            <form method="POST" action="{{ url_for('main.archive_link', link_id=link.id) }}" style="display: inline;">
+                                <button type="submit" class="icon-btn" title="{{ 'Unarchive' if link.pocket_status == 'archive' else 'Archive' }}">
+                                    <i data-lucide="{{ 'rotate-ccw' if link.pocket_status == 'archive' else 'archive' }}"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('main.delete_link', link_id=link.id) }}" style="display: inline;" onsubmit="return confirm('Delete this link?');">
+                                <button type="submit" class="icon-btn icon-btn-danger" title="Delete"><i data-lucide="trash-2"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </form>
+
+    <div class="pagination">
+        {% if pagination.page > 1 %}
+        <a href="{{ url_for('main.links', page=pagination.page - 1, **filters) }}" class="btn btn-secondary">
+            <i data-lucide="chevron-left"></i> Previous
+        </a>
+        {% endif %}
+        
+        <div class="pagination-info">
+            Page <strong>{{ pagination.page }}</strong> of {{ pagination.pages }}
+        </div>
+        
+        {% if pagination.page < pagination.pages %}
+        <a href="{{ url_for('main.links', page=pagination.page + 1, **filters) }}" class="btn btn-secondary">
+            Next <i data-lucide="chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.link-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.link-title {
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+
+.link-title:hover {
+    color: var(--primary-color);
+}
+
+.link-domain-text {
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.action-buttons-list {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    padding: 6px;
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.icon-btn:hover {
+    background: var(--bg-color);
+    color: var(--primary-color);
+}
+
+.icon-btn-danger:hover {
+    color: var(--danger-color);
+}
+
+.icon-btn i {
+    width: 18px;
+    height: 18px;
+}
+
+.header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.text-muted { color: var(--text-muted); }
+
+.pagination-info {
+    color: var(--text-muted);
+}
+</style>
+
+<script>
+function toggleAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.link-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    updateSelectedCount();
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.link-checkbox');
+    checkboxes.forEach(cb => cb.checked = true);
+    document.getElementById('select-all-checkbox').checked = true;
+    updateSelectedCount();
+}
+
+function deselectAll() {
+    const checkboxes = document.querySelectorAll('.link-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    document.getElementById('select-all-checkbox').checked = false;
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const selected = document.querySelectorAll('.link-checkbox:checked').length;
+    const bar = document.getElementById('bulk-actions-bar');
+    const countSpan = document.getElementById('selected-count');
+    
+    countSpan.textContent = selected + ' selected';
+    
+    if (selected > 0) {
+        bar.style.display = 'block';
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+function confirmBulkAction() {
+    const form = document.getElementById('bulk-action-form');
+    const action = document.getElementById('bulk-action-select').value;
+    const selected = document.querySelectorAll('.link-checkbox:checked').length;
+    
+    if (!action) {
+        alert('Please select an action');
+        return false;
+    }
+    
+    if (selected === 0) {
+        alert('Please select at least one link');
+        return false;
+    }
+    
+    if (action === 'delete') {
+        return confirm(`Are you sure you want to delete ${selected} link(s)? This action cannot be undone.`);
+    }
+    
+    return true;
+}
+</script>
+{% endblock %}

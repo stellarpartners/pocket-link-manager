@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Link - Pocket Link Manager{% endblock %}
+
+{% block content %}
+<div class="add-link-page">
+    <div class="header-with-actions">
+        <h1><i data-lucide="plus-circle"></i> Add New Link</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('main.links') }}" class="btn btn-secondary">
+                <i data-lucide="arrow-left"></i> Back to Links
+            </a>
+        </div>
+    </div>
+    
+    <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <form method="POST" action="{{ url_for('main.add_link') }}" class="add-link-form">
+            <div class="form-group">
+                <label for="url">
+                    <i data-lucide="link"></i> URL <span class="required">*</span>
+                </label>
+                <input 
+                    type="url" 
+                    name="url" 
+                    id="url" 
+                    placeholder="https://example.com/article" 
+                    required
+                    autofocus
+                    class="form-control"
+                >
+                <small class="form-help">Enter the full URL of the article or page you want to save</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="tags">
+                    <i data-lucide="tag"></i> Tags
+                </label>
+                <input 
+                    type="text" 
+                    name="tags" 
+                    id="tags" 
+                    placeholder="tag1, tag2, tag3" 
+                    class="form-control"
+                >
+                <small class="form-help">Separate multiple tags with commas</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="pocket_status">
+                    <i data-lucide="bookmark"></i> Status
+                </label>
+                <select name="pocket_status" id="pocket_status" class="form-control">
+                    <option value="unread" selected>Unread</option>
+                    <option value="archive">Archived</option>
+                </select>
+                <small class="form-help">Set the initial status for this link</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i data-lucide="plus"></i> Add Link
+                </button>
+                <a href="{{ url_for('main.links') }}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card" style="max-width: 800px; margin: 2rem auto 0;">
+        <div class="card-header">
+            <h3><i data-lucide="info"></i> How it works</h3>
+        </div>
+        <div class="card-body">
+            <p>When you add a new link, the system will:</p>
+            <ul>
+                <li>Fetch the page and extract metadata (title, author, excerpt)</li>
+                <li>Check if the URL is accessible</li>
+                <li>Extract the domain and create a quality score</li>
+                <li>Save the link to your collection</li>
+            </ul>
+            <p class="text-muted">You can later convert the link to markdown or refresh its metadata.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.add-link-page {
+    padding: var(--spacing-lg) 0;
+}
+
+.header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.header-with-actions h1 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin: 0;
+}
+
+.add-link-form {
+    padding: var(--spacing-lg);
+}
+
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+    color: var(--text-color);
+}
+
+.form-group label i {
+    width: 18px;
+    height: 18px;
+    color: var(--primary-color);
+}
+
+.required {
+    color: var(--danger-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.1);
+}
+
+.form-help {
+    display: block;
+    margin-top: var(--spacing-xs);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.card-header h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin: 0;
+}
+
+.card-header h3 i {
+    width: 20px;
+    height: 20px;
+    color: var(--primary-color);
+}
+
+.card-body ul {
+    margin: var(--spacing-md) 0;
+    padding-left: var(--spacing-lg);
+}
+
+.card-body li {
+    margin-bottom: var(--spacing-xs);
+}
+</style>
+{% endblock %}

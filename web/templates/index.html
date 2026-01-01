@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Pocket Link Manager{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="header-with-actions">
+        <h1>Dashboard Overview</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('main.add_link') }}" class="btn btn-primary">
+                <i data-lucide="plus"></i> Add New Link
+            </a>
+            <span class="text-muted">Last updated: {{ now().strftime('%Y-%m-%d %H:%M') if now else 'Just now' }}</span>
+        </div>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--secondary-color);">
+                <i data-lucide="link"></i>
+            </div>
+            <h3>Total Links</h3>
+            <p class="stat-number">{{ stats.total_links | number_format }}</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--success-color);">
+                <i data-lucide="check-circle"></i>
+            </div>
+            <h3>Accessible</h3>
+            <p class="stat-number">{{ stats.accessible_links | number_format }}</p>
+            <p class="stat-percent">{{ stats.accessibility_rate }}% success rate</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--primary-color);">
+                <i data-lucide="book-open"></i>
+            </div>
+            <h3>Unread</h3>
+            <p class="stat-number">{{ stats.pocket_status.unread | default(0) | number_format }}</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--text-muted);">
+                <i data-lucide="archive"></i>
+            </div>
+            <h3>Archived</h3>
+            <p class="stat-number">{{ stats.pocket_status.archive | default(0) | number_format }}</p>
+        </div>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="card-header">
+                <h2><i data-lucide="bar-chart-2"></i> Status Code Breakdown</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="card-header">
+                <h2><i data-lucide="pie-chart"></i> Quality Distribution</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="qualityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2><i data-lucide="globe"></i> Top Domains</h2>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Domain</th>
+                        <th>Total Links</th>
+                        <th>Success Rate</th>
+                        <th>Avg Quality</th>
+                        <th style="width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for domain in stats.top_domains[:10] %}
+                    <tr>
+                        <td style="font-weight: 500;">{{ domain.domain }}</td>
+                        <td>{{ domain.total }}</td>
+                        <td>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" style="width: {{ domain.success_rate }}%; background-color: {% if domain.success_rate >= 90 %}var(--success-color){% elif domain.success_rate >= 70 %}var(--warning-color){% else %}var(--danger-color){% endif %};"></div>
+                                <span class="progress-label">{{ domain.success_rate }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="quality-score quality-{{ 'high' if domain.avg_quality_score >= 60 else 'medium' if domain.avg_quality_score >= 40 else 'low' }}">
+                                {{ domain.avg_quality_score }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('main.links', domain=domain.domain) }}" class="btn btn-sm btn-secondary">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: var(--spacing-lg);
+}
+
+.stat-icon {
+    margin-bottom: var(--spacing-sm);
+}
+
+.stat-icon i {
+    width: 24px;
+    height: 24px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.card-header h2 {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.card-header h2 i {
+    color: var(--primary-color);
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background-color: var(--border-color);
+    border-radius: 4px;
+    position: relative;
+    margin-top: 4px;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 4px;
+}
+
+.progress-label {
+    font-size: 0.75rem;
+    position: absolute;
+    right: 0;
+    top: -18px;
+    color: var(--text-muted);
+}
+</style>
+
+<script>
+// Configure Chart.js defaults for modern look
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#636e72';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+
+// Status code chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const statusData = {
+    labels: {{ stats.status_code_breakdown.keys() | list | tojson }},
+    datasets: [{
+        label: 'Links',
+        data: {{ stats.status_code_breakdown.values() | list | tojson }},
+        backgroundColor: [
+            'rgba(39, 174, 96, 0.7)',  // 200
+            'rgba(231, 76, 60, 0.7)',  // 404/500
+            'rgba(241, 196, 15, 0.7)', // 403
+            'rgba(52, 152, 219, 0.7)', // 301/302
+        ],
+        borderRadius: 6,
+        borderWidth: 0
+    }]
+};
+new Chart(statusCtx, {
+    type: 'bar',
+    data: statusData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { 
+                beginAtZero: true,
+                grid: { display: true, drawBorder: false, color: '#f1f2f6' }
+            },
+            x: {
+                grid: { display: false }
+            }
+        }
+    }
+});
+
+// Quality distribution chart
+const qualityCtx = document.getElementById('qualityChart').getContext('2d');
+const qualityData = {
+    labels: {{ stats.quality_distribution.keys() | list | tojson }},
+    datasets: [{
+        data: {{ stats.quality_distribution.values() | list | tojson }},
+        backgroundColor: [
+            'rgba(39, 174, 96, 0.7)',
+            'rgba(52, 152, 219, 0.7)',
+            'rgba(241, 196, 15, 0.7)',
+            'rgba(231, 76, 60, 0.7)',
+        ],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+    }]
+};
+new Chart(qualityCtx, {
+    type: 'doughnut',
+    data: qualityData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: { padding: 20 }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

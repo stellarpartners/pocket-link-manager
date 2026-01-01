@@ -1,0 +1,25 @@
+# Core dependencies
+pandas>=1.3.0
+pathlib
+
+# Database
+sqlalchemy>=1.4.0
+
+# Web framework
+flask>=2.0.0
+
+# Content extraction
+readability-lxml>=0.8.1
+trafilatura>=1.6.0
+
+# HTTP requests (for crawler)
+requests>=2.25.0
+urllib3>=1.26.0
+
+# Utilities
+python-dateutil>=2.8.0
+tqdm>=4.60.0
+
+# Markdown processing
+markdown>=3.3.0
+markdownify>=0.11.6

@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Quality Analysis - Pocket Link Manager{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="quality-page">
+    <div class="header-with-actions">
+        <h1><i data-lucide="bar-chart"></i> Quality Analysis</h1>
+        <div class="header-actions">
+            <span class="badge badge-info">System Health Dashboard</span>
+        </div>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--secondary-color);">
+                <i data-lucide="wifi"></i>
+            </div>
+            <h3>Accessibility Rate</h3>
+            <p class="stat-number">{{ stats.accessibility_rate }}%</p>
+            <p class="text-muted">{{ stats.accessible_links | number_format }} / {{ stats.total_links | number_format }} reachable</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--success-color);">
+                <i data-lucide="file-text"></i>
+            </div>
+            <h3>Content Extraction</h3>
+            <p class="stat-number">{{ stats.content_stats.content_rate }}%</p>
+            <p class="text-muted">{{ stats.content_stats.with_content | number_format }} links with full content</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--primary-color);">
+                <i data-lucide="markdown"></i>
+            </div>
+            <h3>Markdown Output</h3>
+            <p class="stat-number">{{ stats.markdown_stats.markdown_rate }}%</p>
+            <p class="text-muted">{{ stats.markdown_stats.with_markdown | number_format }} files ready for Obsidian</p>
+        </div>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="card-header">
+                <h2><i data-lucide="activity"></i> Status Code Distribution</h2>
+            </div>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="card-header">
+                <h2><i data-lucide="gauge"></i> Quality Score Distribution</h2>
+            </div>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="qualityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2><i data-lucide="list"></i> Status Code Breakdown</h2>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Status Code</th>
+                        <th>Links Count</th>
+                        <th>Distribution</th>
+                        <th style="width: 150px;">Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for code, count in stats.status_code_breakdown.items() | sort %}
+                    <tr>
+                        <td style="font-weight: 700;">
+                            <span class="status-code status-{{ (code // 100) if code|int else '0' }}xx">
+                                {{ code }}
+                            </span>
+                        </td>
+                        <td>{{ count | number_format }}</td>
+                        <td>
+                            {% set pct = (count / stats.total_links * 100) %}
+                            <div class="progress-bar-container" style="margin-top: 0;">
+                                <div class="progress-bar" style="width: {{ pct }}%; background-color: var(--secondary-color);"></div>
+                            </div>
+                        </td>
+                        <td style="font-weight: 600;">{{ "%.1f" | format(pct) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Configure Chart.js
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#636e72';
+
+// Status code chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ stats.status_code_breakdown.keys() | list | tojson }},
+        datasets: [{
+            label: 'Links',
+            data: {{ stats.status_code_breakdown.values() | list | tojson }},
+            backgroundColor: 'rgba(52, 152, 219, 0.7)',
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { grid: { drawBorder: false, color: '#f1f2f6' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// Quality distribution chart
+const qualityCtx = document.getElementById('qualityChart').getContext('2d');
+new Chart(qualityCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ stats.quality_distribution.keys() | list | tojson }},
+        datasets: [{
+            data: {{ stats.quality_distribution.values() | list | tojson }},
+            backgroundColor: [
+                'rgba(39, 174, 96, 0.7)',
+                'rgba(52, 152, 219, 0.7)',
+                'rgba(241, 196, 15, 0.7)',
+                'rgba(231, 76, 60, 0.7)',
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: { padding: 20, usePointStyle: true }
+            }
+        }
+    }
+});
+</script>
+
+<style>
+.chart-container {
+    position: relative;
+}
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: var(--spacing-lg);
+}
+.card-header h2 {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background-color: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.progress-bar {
+    height: 100%;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}

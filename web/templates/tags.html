@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Tags - Pocket Link Manager{% endblock %}
+
+{% block content %}
+<div class="tags-page">
+    <div class="header-with-actions">
+        <h1>Tags Library</h1>
+        <div class="header-actions">
+            <span class="badge badge-info"><i data-lucide="tag" size="14"></i> {{ tags|length }} unique tags</span>
+        </div>
+    </div>
+    
+    <div class="card tags-overview">
+        <div class="stat-item">
+            <label>Total tagged links</label>
+            <span class="stat-value">{{ tags|sum(attribute='count') }}</span>
+        </div>
+        <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="tag-search" placeholder="Search tags..." onkeyup="filterTags()">
+        </div>
+    </div>
+    
+    {% if tags %}
+    <div class="tags-grid" id="tags-grid">
+        {% for tag_info in tags %}
+        <div class="tag-card" data-tag-name="{{ tag_info.tag.lower() }}">
+            <div class="tag-header">
+                <div class="tag-icon">
+                    <i data-lucide="tag"></i>
+                </div>
+                <div class="tag-info">
+                    <a href="{{ url_for('main.links', tag=tag_info.tag) }}" class="tag-title">
+                        {{ tag_info.tag }}
+                    </a>
+                    <span class="tag-count text-muted">{{ tag_info.count }} link{{ 's' if tag_info.count != 1 else '' }}</span>
+                </div>
+            </div>
+            <div class="tag-footer">
+                <a href="{{ url_for('main.links', tag=tag_info.tag) }}" class="btn btn-sm btn-secondary" style="width: 100%;">
+                    View Links <i data-lucide="arrow-right" size="14"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card empty-state-card">
+        <div class="empty-state">
+            <i data-lucide="tag-off" size="48"></i>
+            <h2>No tags found</h2>
+            <p>Tags will appear here once you import links with tags from Pocket.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.tags-overview {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-xl);
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.search-box {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.search-box i {
+    position: absolute;
+    left: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    width: 18px;
+    height: 18px;
+}
+
+.search-box input {
+    padding-left: 2.75rem;
+}
+
+.tag-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.tag-header {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    flex: 1;
+}
+
+.tag-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--secondary-color);
+    border-radius: var(--border-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tag-icon i {
+    width: 24px;
+    height: 24px;
+}
+
+.tag-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.tag-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 2px;
+}
+
+.tag-footer {
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.empty-state-card {
+    padding: var(--spacing-xl) * 2;
+    text-align: center;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    color: var(--border-color);
+}
+
+@media (max-width: 600px) {
+    .tags-overview {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+</style>
+
+<script>
+function filterTags() {
+    const searchInput = document.getElementById('tag-search');
+    const filter = searchInput.value.toLowerCase();
+    const grid = document.getElementById('tags-grid');
+    const cards = grid.getElementsByClassName('tag-card');
+    
+    for (let i = 0; i < cards.length; i++) {
+        const tagName = cards[i].getAttribute('data-tag-name');
+        if (tagName.includes(filter)) {
+            cards[i].style.display = "";
+        } else {
+            cards[i].style.display = "none";
+        }
+    }
+}
+</script>
+{% endblock %}
