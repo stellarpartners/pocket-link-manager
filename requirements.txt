@@ -23,3 +23,6 @@ tqdm>=4.60.0
 # Markdown processing
 markdown>=3.3.0
 markdownify>=0.11.6
+
+# Browser automation (for JavaScript redirects)
+playwright>=1.40.0

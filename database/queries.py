@@ -145,6 +145,41 @@ class LinkQuery:
         return self.session.query(Link).join(QualityMetric).filter(
             QualityMetric.has_markdown == False
         ).all()
+    
+    def get_links_by_domain(self, domain: str):
+        """Get all links for a specific domain"""
+        return self.session.query(Link).filter(Link.domain == domain)
+    
+    def get_uncrawled_by_domain(self, domain: str):
+        """Get links for a domain that haven't been crawled yet"""
+        return self.session.query(Link).outerjoin(CrawlResult).filter(
+            and_(
+                Link.domain == domain,
+                CrawlResult.id == None
+            )
+        )
+    
+    def get_domains_with_links(self):
+        """Get all domains that have links, with link counts"""
+        results = self.session.query(
+            Link.domain,
+            func.count(Link.id).label('count')
+        ).filter(
+            Link.domain.isnot(None),
+            Link.domain != ''
+        ).group_by(Link.domain).order_by(desc('count')).all()
+        
+        return [{'domain': domain, 'count': count} for domain, count in results]
+
+
+def normalize_domain(domain: str) -> str:
+    """Normalize domain by removing www. prefix"""
+    if not domain:
+        return domain
+    domain_lower = domain.lower()
+    if domain_lower.startswith('www.'):
+        return domain[4:]  # Remove 'www.' prefix, preserving case of rest
+    return domain
 
 
 class StatisticsQuery:
@@ -157,17 +192,42 @@ class StatisticsQuery:
         """Get total number of links"""
         return self.session.query(Link).count()
     
-    def get_status_code_breakdown(self) -> Dict[int, int]:
-        """Get count of links by status code"""
+    def get_status_code_breakdown(self) -> Dict[str, int]:
+        """Get count of links by status code, grouped as requested"""
         results = self.session.query(
             CrawlResult.status_code,
             func.count(CrawlResult.id).label('count')
         ).group_by(CrawlResult.status_code).all()
         
-        return {status_code: count for status_code, count in results if status_code}
+        breakdown = {
+            '200': 0,
+            '403': 0,
+            '404': 0,
+            '4XX': 0,
+            '5XX': 0
+        }
+        
+        for status_code, count in results:
+            if not status_code:
+                continue
+                
+            code_str = str(status_code)
+            if code_str == '200':
+                breakdown['200'] += count
+            elif code_str == '403':
+                breakdown['403'] += count
+            elif code_str == '404':
+                breakdown['404'] += count
+            elif code_str.startswith('4'):
+                breakdown['4XX'] += count
+            elif code_str.startswith('5'):
+                breakdown['5XX'] += count
+        
+        # Remove categories with 0 counts to keep it clean
+        return {k: v for k, v in breakdown.items() if v > 0}
     
     def get_domain_stats(self, limit: int = 20) -> List[Dict]:
-        """Get statistics by domain - uses Link.domain which should be synced with final URL"""
+        """Get statistics by domain, normalized (www. removed) and sorted by success_rate * total"""
         # Link.domain should be synced with final URL when updated
         # This ensures we're working with final URLs
         results = self.session.query(
@@ -178,20 +238,94 @@ class StatisticsQuery:
         ).join(QualityMetric).filter(
             Link.domain.isnot(None),
             Link.domain != ''
-        ).group_by(Link.domain).order_by(
-            desc('total')
-        ).limit(limit).all()
+        ).group_by(Link.domain).all()
         
-        return [
-            {
-                'domain': domain,
+        # Normalize domains and aggregate statistics
+        domain_stats = {}
+        domain_to_original = {}
+        
+        for domain, total, accessible, avg_score in results:
+            normalized = normalize_domain(domain)
+            if normalized not in domain_stats:
+                domain_stats[normalized] = {
+                    'total': 0,
+                    'accessible': 0,
+                    'quality_scores': []
+                }
+                domain_to_original[normalized] = []
+            domain_stats[normalized]['total'] += total
+            domain_stats[normalized]['accessible'] += accessible or 0
+            if avg_score:
+                domain_stats[normalized]['quality_scores'].append((avg_score, total))
+            domain_to_original[normalized].append(domain)
+        
+        # Calculate weighted average quality scores and build result list
+        domain_list = []
+        for normalized_domain in domain_stats.keys():
+            stats = domain_stats[normalized_domain]
+            total = stats['total']
+            accessible = stats['accessible']
+            
+            # Calculate weighted average quality score
+            if stats['quality_scores']:
+                weighted_sum = sum(score * count for score, count in stats['quality_scores'])
+                total_weight = sum(count for _, count in stats['quality_scores'])
+                avg_quality_score = weighted_sum / total_weight if total_weight > 0 else 0
+            else:
+                avg_quality_score = 0
+            
+            success_rate = round(accessible / total * 100, 1) if total > 0 else 0
+            score = success_rate * total  # Calculate score: success_rate * total
+            
+            domain_list.append({
+                'domain': normalized_domain,
                 'total': total,
-                'accessible': accessible or 0,
-                'success_rate': round((accessible or 0) / total * 100, 1) if total > 0 else 0,
-                'avg_quality_score': round(avg_score or 0, 1)
+                'accessible': accessible,
+                'success_rate': success_rate,
+                'avg_quality_score': round(avg_quality_score, 1),
+                'score': score,  # Add score for sorting
+                'original_domains': domain_to_original[normalized_domain]  # For filtering
+            })
+        
+        # Sort by score (success_rate * total) in descending order
+        domain_list.sort(key=lambda x: x['score'], reverse=True)
+        
+        # Apply limit after sorting
+        return domain_list[:limit]
+    
+    def get_domain_link_counts(self) -> List[Dict]:
+        """Get all domains with their link counts, normalized (www. removed) and sorted alphabetically"""
+        results = self.session.query(
+            Link.domain,
+            func.count(Link.id).label('count')
+        ).filter(
+            Link.domain.isnot(None),
+            Link.domain != ''
+        ).group_by(Link.domain).all()
+        
+        # Normalize domains and aggregate counts
+        domain_counts = {}
+        domain_to_original = {}  # Map normalized to original domain(s) for filtering
+        
+        for domain, count in results:
+            normalized = normalize_domain(domain)
+            if normalized not in domain_counts:
+                domain_counts[normalized] = 0
+                domain_to_original[normalized] = []
+            domain_counts[normalized] += count
+            domain_to_original[normalized].append(domain)
+        
+        # Convert to list and sort alphabetically by normalized domain
+        domain_list = [
+            {
+                'domain': normalized_domain,
+                'count': domain_counts[normalized_domain],
+                'original_domains': domain_to_original[normalized_domain]  # For filtering
             }
-            for domain, total, accessible, avg_score in results
+            for normalized_domain in sorted(domain_counts.keys())
         ]
+        
+        return domain_list
     
     def get_quality_distribution(self) -> Dict[str, int]:
         """Get distribution of quality scores"""
@@ -302,6 +436,33 @@ class StatisticsQuery:
         tags_list.sort(key=lambda x: x['count'], reverse=True)
         
         return tags_list
+    
+    def get_recently_used_tags(self, limit: int = 3) -> List[str]:
+        """Get recently used tags based on links that were recently updated"""
+        import json
+        
+        # Get recently updated links with tags, ordered by most recent update
+        recent_links = self.session.query(Link).filter(
+            Link.tag_count > 0,
+            Link.updated_at.isnot(None)
+        ).order_by(desc(Link.updated_at)).limit(100).all()
+        
+        # Extract tags from recent links, maintaining order of appearance
+        seen_tags = set()
+        recent_tags = []
+        
+        for link in recent_links:
+            tags = link.get_tags_list()
+            for tag in tags:
+                if tag and tag not in seen_tags:
+                    seen_tags.add(tag)
+                    recent_tags.append(tag)
+                    if len(recent_tags) >= limit:
+                        break
+            if len(recent_tags) >= limit:
+                break
+        
+        return recent_tags[:limit]
 
 
 # Helper function for pagination

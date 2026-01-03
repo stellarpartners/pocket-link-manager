@@ -16,16 +16,17 @@
     <nav class="navbar">
         <div class="container">
             <div class="nav-brand">
-                <a href="{{ url_for('main.index') }}">
+                <a href="{{ url_for('main.data_quality') }}">
                     <img src="{{ url_for('static', filename='pocket-logo.svg') }}" alt="Pocket" class="pocket-logo">
                     <span class="brand-text">Link Manager</span>
                 </a>
             </div>
             <ul class="nav-menu">
-                <li><a href="{{ url_for('main.index') }}" class="{% if request.endpoint == 'main.index' %}active{% endif %}">Dashboard</a></li>
+                <li><a href="{{ url_for('main.data_quality') }}" class="{% if request.endpoint == 'main.data_quality' or request.endpoint == 'main.index' %}active{% endif %}">Data Quality</a></li>
                 <li><a href="{{ url_for('main.links') }}" class="{% if request.endpoint == 'main.links' %}active{% endif %}">Links</a></li>
+                <li><a href="{{ url_for('main.domains') }}" class="{% if request.endpoint == 'main.domains' %}active{% endif %}">Domains</a></li>
                 <li><a href="{{ url_for('main.tags') }}" class="{% if request.endpoint == 'main.tags' %}active{% endif %}">Tags</a></li>
-                <li><a href="{{ url_for('main.quality') }}" class="{% if request.endpoint == 'main.quality' %}active{% endif %}">Quality</a></li>
+                <li><a href="{{ url_for('main.sync') }}" class="{% if request.endpoint == 'main.sync' %}active{% endif %}">Sync</a></li>
                 <li><a href="{{ url_for('main.export') }}" class="{% if request.endpoint == 'main.export' %}active{% endif %}">Export</a></li>
             </ul>
         </div>

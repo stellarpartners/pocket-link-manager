@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block title %}Domains - Pocket Link Manager{% endblock %}
+
+{% block content %}
+<div class="domains-page">
+    <div class="header-with-actions">
+        <div class="header-title-group">
+            <h1><i data-lucide="globe"></i> Domains</h1>
+            <span class="badge badge-info"><i data-lucide="globe" size="14"></i> {{ pagination.total }} unique domains</span>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('main.add_link') }}" class="btn btn-primary">
+                <i data-lucide="plus"></i> Add New Link
+            </a>
+        </div>
+    </div>
+    
+    <div class="card domains-overview">
+        <div class="stat-group">
+            <span class="stat-label">Total links across {% if search %}these{% else %}all{% endif %} domains</span>
+            <span class="stat-value">{{ domains|sum(attribute='total') }}</span>
+        </div>
+        <form method="GET" action="{{ url_for('main.domains') }}" id="domain-search-form" class="search-box-inline">
+            <i data-lucide="search"></i>
+            <input type="text" name="search" id="domain-search" placeholder="Search domains..." value="{{ search }}" onkeypress="if(event.key === 'Enter') { event.preventDefault(); this.form.submit(); }">
+            {% if sort_by %}
+            <input type="hidden" name="sort_by" value="{{ sort_by }}">
+            {% endif %}
+            {% if sort_order %}
+            <input type="hidden" name="sort_order" value="{{ sort_order }}">
+            {% endif %}
+        </form>
+    </div>
+    
+    {% if domains %}
+    <div class="card">
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="{{ url_for('main.domains', sort_by='domain', sort_order='asc' if sort_by == 'domain' and sort_order == 'desc' else 'desc', search=search, page=1) }}" class="sort-header {% if sort_by == 'domain' %}active{% endif %}" title="Sort by Domain">
+                                Domain
+                                {% if sort_by == 'domain' %}
+                                    <i data-lucide="chevron-{{ 'down' if sort_order == 'desc' else 'up' }}" size="14"></i>
+                                {% else %}
+                                    <i data-lucide="chevrons-up-down" size="14" class="sort-icon-placeholder"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th style="text-align: right;">
+                            <a href="{{ url_for('main.domains', sort_by='total', sort_order='asc' if sort_by == 'total' and sort_order == 'desc' else 'desc', search=search, page=1) }}" class="sort-header {% if sort_by == 'total' %}active{% endif %}" title="Sort by Number of Links">
+                                Links
+                                {% if sort_by == 'total' %}
+                                    <i data-lucide="chevron-{{ 'down' if sort_order == 'desc' else 'up' }}" size="14"></i>
+                                {% else %}
+                                    <i data-lucide="chevrons-up-down" size="14" class="sort-icon-placeholder"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('main.domains', sort_by='success_rate', sort_order='asc' if sort_by == 'success_rate' and sort_order == 'desc' else 'desc', search=search, page=1) }}" class="sort-header {% if sort_by == 'success_rate' %}active{% endif %}" title="Sort by Success Rate">
+                                Success Rate
+                                {% if sort_by == 'success_rate' %}
+                                    <i data-lucide="chevron-{{ 'down' if sort_order == 'desc' else 'up' }}" size="14"></i>
+                                {% else %}
+                                    <i data-lucide="chevrons-up-down" size="14" class="sort-icon-placeholder"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('main.domains', sort_by='quality', sort_order='asc' if sort_by == 'quality' and sort_order == 'desc' else 'desc', search=search, page=1) }}" class="sort-header {% if sort_by == 'quality' %}active{% endif %}" title="Sort by Average Quality Score">
+                                Avg Quality
+                                {% if sort_by == 'quality' %}
+                                    <i data-lucide="chevron-{{ 'down' if sort_order == 'desc' else 'up' }}" size="14"></i>
+                                {% else %}
+                                    <i data-lucide="chevrons-up-down" size="14" class="sort-icon-placeholder"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th style="width: 150px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for domain_info in domains %}
+                    <tr>
+                        <td style="font-weight: 500; font-family: 'JetBrains Mono', monospace;">
+                            <a href="{{ url_for('main.links', domain=domain_info.domain) }}" style="color: var(--text-color); text-decoration: none;">
+                                {{ domain_info.domain }}
+                            </a>
+                        </td>
+                        <td style="text-align: right; font-weight: 600;">{{ domain_info.total }}</td>
+                        <td>
+                            {% set success_rate = domain_info.get('success_rate', 0) %}
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" style="width: {{ success_rate }}%; background-color: {% if success_rate >= 90 %}var(--success-color){% elif success_rate >= 70 %}var(--warning-color){% else %}var(--danger-color){% endif %};"></div>
+                                <span class="progress-label">{{ success_rate }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% set avg_quality = domain_info.get('avg_quality_score', 0) %}
+                            <span class="quality-score quality-{{ 'high' if avg_quality >= 60 else 'medium' if avg_quality >= 40 else 'low' }}">
+                                {{ avg_quality }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <a href="{{ url_for('main.links', domain=domain_info.domain) }}" class="btn btn-sm btn-secondary">View</a>
+                                <button type="button" 
+                                        class="btn btn-sm btn-primary" 
+                                        onclick="refreshDomain('{{ domain_info.domain|e }}', {{ domain_info.total }}, this)"
+                                        title="Refresh all links for this domain">
+                                    <i data-lucide="refresh-cw" class="refresh-icon"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.page > 1 %}
+        <a href="{{ url_for('main.domains', page=pagination.page - 1, **filters) }}" class="btn btn-secondary">
+            <i data-lucide="chevron-left"></i> Previous
+        </a>
+        {% endif %}
+        
+        <div class="pagination-info">
+            Page <strong>{{ pagination.page }}</strong> of {{ pagination.pages }}
+            (Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} - {{ [pagination.page * pagination.per_page, pagination.total]|min }} of {{ pagination.total }})
+        </div>
+        
+        {% if pagination.page < pagination.pages %}
+        <a href="{{ url_for('main.domains', page=pagination.page + 1, **filters) }}" class="btn btn-secondary">
+            Next <i data-lucide="chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="card empty-state-card">
+        <div class="empty-state">
+            <i data-lucide="globe-off" size="48"></i>
+            <h2>No domains found</h2>
+            <p>{% if search %}No domains match your search.{% else %}Domains will appear here once you import links from Pocket.{% endif %}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.header-title-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.header-title-group h1 {
+    margin-bottom: 0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.domains-overview {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-xl);
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.stat-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-color);
+    line-height: 1;
+}
+
+/* Search box styles are now in main CSS - using search-box-inline variant */
+
+.empty-state-card {
+    padding: var(--spacing-xl) * 2;
+    text-align: center;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    color: var(--border-color);
+}
+
+.sort-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.sort-header:hover {
+    color: var(--primary-color);
+}
+
+.sort-header.active {
+    color: var(--primary-color);
+}
+
+.sort-icon-placeholder {
+    opacity: 0.3;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background-color: var(--border-color);
+    border-radius: 4px;
+    position: relative;
+    margin-top: 4px;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-label {
+    font-size: 0.75rem;
+    position: absolute;
+    right: 0;
+    top: -18px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.quality-score {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.quality-score.quality-high {
+    background-color: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+}
+
+.quality-score.quality-medium {
+    background-color: rgba(241, 196, 15, 0.1);
+    color: var(--warning-color);
+}
+
+.quality-score.quality-low {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: var(--danger-color);
+}
+
+.refresh-icon {
+    transition: transform 0.3s ease;
+}
+
+.refresh-icon.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+}
+
+.pagination-info {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+@media (max-width: 600px) {
+    .domains-overview {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-box {
+        max-width: 100%;
+    }
+    
+    .pagination {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .pagination-info {
+        order: -1;
+    }
+}
+</style>
+
+<script>
+function refreshDomain(domain, linkCount, button) {
+    if (!confirm(`Refresh all ${linkCount} links for domain "${domain}"? This will update metadata, crawl results, and content extraction.`)) {
+        return;
+    }
+    
+    const icon = button.querySelector('i[data-lucide="refresh-cw"]');
+    const originalHTML = button.innerHTML;
+    
+    // Disable button and show spinning icon
+    button.disabled = true;
+    if (icon) {
+        icon.classList.add('spinning');
+    }
+    button.innerHTML = '<i data-lucide="refresh-cw" class="refresh-icon spinning"></i>';
+    
+    // Start refresh via API
+    fetch(`/api/domains/${encodeURIComponent(domain)}/bulk-refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Re-enable button after a short delay
+            setTimeout(() => {
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+                lucide.createIcons();
+            }, 2000);
+        } else {
+            console.error('Refresh error:', data.error || 'Failed to start refresh');
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+            lucide.createIcons();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.disabled = false;
+        button.innerHTML = originalHTML;
+        lucide.createIcons();
+    });
+}
+</script>
+{% endblock %}

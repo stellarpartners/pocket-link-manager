@@ -32,7 +32,6 @@ The codebase uses `datetime.utcnow()` in several places, which is deprecated in 
 - `web/app.py` - Template context processor
 - `web/routes.py` - Multiple route handlers
 - `extractor/url_to_markdown.py` - Content extraction
-- `scripts/browser_crawl/batch_browser_crawler.py` - Batch crawling
 
 **Future Migration:**
 When Python 3.14 is released, these should be updated to use:

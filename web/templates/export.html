@@ -5,9 +5,14 @@
 {% block content %}
 <div class="export-page">
     <div class="header-with-actions">
-        <h1><i data-lucide="send"></i> Obsidian Export</h1>
-        <div class="header-actions">
+        <div class="header-title-group">
+            <h1><i data-lucide="send"></i> Obsidian Export</h1>
             <span class="badge badge-info">Obsidian Sync Tool</span>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('main.add_link') }}" class="btn btn-primary">
+                <i data-lucide="plus"></i> Add New Link
+            </a>
         </div>
     </div>
     
@@ -111,6 +116,29 @@
 </div>
 
 <style>
+.header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.header-title-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.header-title-group h1 {
+    margin-bottom: 0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: 1fr;

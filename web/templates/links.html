@@ -5,12 +5,14 @@
 {% block content %}
 <div class="links-page">
     <div class="header-with-actions">
-        <h1>Links Library</h1>
+        <div class="header-title-group">
+            <h1>Links Library</h1>
+            <span class="badge badge-info">{{ pagination.total }} links found</span>
+        </div>
         <div class="header-actions">
             <a href="{{ url_for('main.add_link') }}" class="btn btn-primary">
                 <i data-lucide="plus"></i> Add New Link
             </a>
-            <span class="badge badge-info">{{ pagination.total }} links found</span>
         </div>
     </div>
     
@@ -19,6 +21,23 @@
         <span class="filter-badge">
             <i data-lucide="tag" size="16"></i> Tag: <strong>{{ current_tag }}</strong>
             <a href="{{ url_for('main.links') }}" class="remove-filter"><i data-lucide="x"></i></a>
+        </span>
+    </div>
+    {% endif %}
+    {% if filters.domain %}
+    <div class="current-filter">
+        <span class="filter-badge">
+            <i data-lucide="globe" size="16"></i> Domain: <strong>{{ filters.domain }}</strong>
+            <a href="{{ url_for('main.links', 
+                search=filters.search if filters.search else None,
+                status_code=filters.status_code if filters.status_code else None,
+                pocket_status=filters.pocket_status if filters.pocket_status else None,
+                tag=filters.tag if filters.tag else None,
+                quality_min=filters.quality_min if filters.quality_min else None,
+                quality_max=filters.quality_max if filters.quality_max else None,
+                sort_by=filters.sort_by if filters.sort_by else None,
+                sort_order=filters.sort_order if filters.sort_order else None
+            ) }}" class="remove-filter"><i data-lucide="x"></i></a>
         </span>
     </div>
     {% endif %}
@@ -31,6 +50,9 @@
             </div>
             {% if current_tag %}
             <input type="hidden" name="tag" value="{{ current_tag }}">
+            {% endif %}
+            {% if filters.domain %}
+            <input type="hidden" name="domain" value="{{ filters.domain }}">
             {% endif %}
             <div class="form-group">
                 <label for="status_code">HTTP Status</label>
@@ -47,17 +69,6 @@
                     <option value="">All Status</option>
                     <option value="unread" {% if filters.pocket_status == 'unread' %}selected{% endif %}>Unread</option>
                     <option value="archive" {% if filters.pocket_status == 'archive' %}selected{% endif %}>Archived</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="domain">Domain</label>
-                <select name="domain" id="domain">
-                    <option value="">All Domains</option>
-                    {% for domain_stat in domain_stats %}
-                    <option value="{{ domain_stat.domain }}" {% if filters.domain == domain_stat.domain %}selected{% endif %}>
-                        {{ domain_stat.domain }} ({{ domain_stat.total }})
-                    </option>
-                    {% endfor %}
                 </select>
             </div>
             <div class="form-group">
@@ -82,17 +93,38 @@
     </div>
 
     <form method="POST" action="{{ url_for('main.bulk_action') }}" id="bulk-action-form" onsubmit="return confirmBulkAction()">
-        <div class="bulk-actions" id="bulk-actions-bar" style="display: none; position: sticky; top: 80px; z-index: 900; background: var(--primary-color); color: white; border: none;">
+        <div class="bulk-actions" id="bulk-actions-bar" style="position: sticky; top: 80px; z-index: 900; background: var(--primary-color); color: white; border: none;">
             <div class="bulk-controls">
-                <span id="selected-count" class="selected-count" style="color: white; font-weight: 700; margin-right: var(--spacing-lg);">0 selected</span>
-                <select name="action" id="bulk-action-select" style="width: auto; background: white; color: var(--text-color);">
-                    <option value="">Choose bulk action...</option>
-                    <option value="archive">Archive Selected</option>
-                    <option value="unarchive">Unarchive Selected</option>
-                    <option value="delete">Delete Selected</option>
-                </select>
-                <button type="submit" class="btn btn-sm btn-secondary" style="background: white; border: none;">Apply to selected</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="deselectAll()" style="background: rgba(255,255,255,0.2); color: white; border: none; margin-left: auto;">Cancel</button>
+                <input type="hidden" name="action" id="bulk-action-input" value="">
+                <div class="bulk-action-buttons">
+                    <button type="button" class="bulk-icon-btn" onclick="selectAllMatching()" title="Select all links matching current filters">
+                        <i data-lucide="check-square"></i>
+                        <span>Select All</span>
+                    </button>
+                    <button type="button" class="bulk-icon-btn" onclick="openAllSelectedLinks()" title="Open all selected links in new tabs">
+                        <i data-lucide="external-link"></i>
+                        <span>Open All</span>
+                    </button>
+                    <button type="button" class="bulk-icon-btn" onclick="setBulkAction('refresh', this)" title="Refresh URL metadata from live URLs">
+                        <i data-lucide="refresh-cw"></i>
+                        <span>Refresh URL</span>
+                    </button>
+                    <button type="button" class="bulk-icon-btn bulk-icon-btn-danger" onclick="setBulkAction('delete', this)" title="Permanently delete selected links">
+                        <i data-lucide="trash-2"></i>
+                        <span>Delete</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="deselectAll()" style="background: rgba(255,255,255,0.2); color: white; border: none;">Cancel</button>
+                </div>
+                <span id="selected-count" class="selected-count" style="color: white; font-weight: 700; margin-left: auto;">0 selected</span>
+            </div>
+            <div id="bulk-progress-container" style="display: none; margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid rgba(255,255,255,0.2);">
+                <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xs);">
+                    <span id="bulk-progress-text" style="color: white; font-size: 0.875rem; font-weight: 600;">Refreshing links...</span>
+                    <span id="bulk-progress-count" style="color: white; font-size: 0.875rem; margin-left: auto;">0 / 0</span>
+                </div>
+                <div class="bulk-progress-bar" style="width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden;">
+                    <div id="bulk-progress-fill" style="height: 100%; background: white; width: 0%; transition: width 0.3s ease; border-radius: 4px;"></div>
+                </div>
             </div>
         </div>
 
@@ -101,22 +133,49 @@
             <thead>
                 <tr>
                     <th style="width: 40px;"><input type="checkbox" id="select-all-checkbox" onchange="toggleAll(this)"></th>
-                    <th>Link Details</th>
+                    <th>
+                        <a href="{{ url_for('main.links', sort_by='domain', sort_order='asc' if filters.sort_by == 'domain' and filters.sort_order == 'desc' else 'desc', search=filters.search, status_code=filters.status_code, pocket_status=filters.pocket_status, domain=filters.domain, tag=filters.tag, quality_min=filters.quality_min, quality_max=filters.quality_max) }}" class="sort-header {% if filters.sort_by == 'domain' %}active{% endif %}" title="Sort by Domain">
+                            Link Details
+                            {% if filters.sort_by == 'domain' %}
+                                <i data-lucide="chevron-{{ 'down' if filters.sort_order == 'desc' else 'up' }}" size="14"></i>
+                            {% else %}
+                                <i data-lucide="chevrons-up-down" size="14" class="sort-icon-placeholder"></i>
+                            {% endif %}
+                        </a>
+                    </th>
                     <th>Tags</th>
                     <th>Status</th>
                     <th>HTTP</th>
-                    <th>Quality</th>
-                    <th>Saved</th>
+                    <th>
+                        <a href="{{ url_for('main.links', sort_by='quality_score', sort_order='asc' if filters.sort_by == 'quality_score' and filters.sort_order == 'desc' else 'desc', search=filters.search, status_code=filters.status_code, pocket_status=filters.pocket_status, domain=filters.domain, tag=filters.tag, quality_min=filters.quality_min, quality_max=filters.quality_max) }}" class="sort-header {% if filters.sort_by == 'quality_score' %}active{% endif %}" title="Sort by Quality Score">
+                            Quality
+                            {% if filters.sort_by == 'quality_score' %}
+                                <i data-lucide="chevron-{{ 'down' if filters.sort_order == 'desc' else 'up' }}" size="14"></i>
+                            {% else %}
+                                <i data-lucide="chevrons-up-down" size="14" class="sort-icon-placeholder"></i>
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="{{ url_for('main.links', sort_by='date_saved', sort_order='asc' if filters.sort_by == 'date_saved' and filters.sort_order == 'desc' else 'desc', search=filters.search, status_code=filters.status_code, pocket_status=filters.pocket_status, domain=filters.domain, tag=filters.tag, quality_min=filters.quality_min, quality_max=filters.quality_max) }}" class="sort-header {% if filters.sort_by == 'date_saved' %}active{% endif %}" title="Sort by Date Saved">
+                            Saved
+                            {% if filters.sort_by == 'date_saved' %}
+                                <i data-lucide="chevron-{{ 'down' if filters.sort_order == 'desc' else 'up' }}" size="14"></i>
+                            {% else %}
+                                <i data-lucide="chevrons-up-down" size="14" class="sort-icon-placeholder"></i>
+                            {% endif %}
+                        </a>
+                    </th>
                     <th style="text-align: right;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for link in links %}
                 <tr>
-                    <td><input type="checkbox" name="link_ids" value="{{ link.id }}" class="link-checkbox" onchange="updateSelectedCount()"></td>
+                    <td><input type="checkbox" name="link_ids" value="{{ link.id }}" class="link-checkbox" onclick="handleCheckboxClick(event, this)" onchange="handleCheckboxChange(this)"></td>
                     <td>
                         <div class="link-info">
-                            <a href="{{ url_for('main.link_detail', link_id=link.id) }}" class="link-title">
+                            <a href="{{ url_for('main.link_detail', link_id=link.id, back=request.full_path) }}" class="link-title">
                                 {{ link.title[:80] }}{% if link.title|length > 80 %}...{% endif %}
                             </a>
                             <div class="link-domain-text text-muted">
@@ -167,12 +226,10 @@
                     <td class="text-muted" style="font-size: 0.85rem;">{{ link.date_saved.strftime('%Y-%m-%d') if link.date_saved else '-' }}</td>
                     <td style="text-align: right;">
                         <div class="action-buttons-list">
-                            <a href="{{ url_for('main.link_detail', link_id=link.id) }}" class="icon-btn" title="View details"><i data-lucide="eye"></i></a>
-                            <form method="POST" action="{{ url_for('main.archive_link', link_id=link.id) }}" style="display: inline;">
-                                <button type="submit" class="icon-btn" title="{{ 'Unarchive' if link.pocket_status == 'archive' else 'Archive' }}">
-                                    <i data-lucide="{{ 'rotate-ccw' if link.pocket_status == 'archive' else 'archive' }}"></i>
-                                </button>
-                            </form>
+                            <a href="{{ url_for('main.link_detail', link_id=link.id, back=request.full_path) }}" class="icon-btn" title="View details"><i data-lucide="eye"></i></a>
+                            <button type="button" class="icon-btn" title="Refresh from URL" id="refresh-metadata-btn-{{ link.id }}" onclick="refreshMetadata({{ link.id }}, this)">
+                                <i data-lucide="refresh-cw"></i>
+                            </button>
                             <form method="POST" action="{{ url_for('main.delete_link', link_id=link.id) }}" style="display: inline;" onsubmit="return confirm('Delete this link?');">
                                 <button type="submit" class="icon-btn icon-btn-danger" title="Delete"><i data-lucide="trash-2"></i></button>
                             </form>
@@ -185,6 +242,7 @@
         </div>
     </form>
 
+    {% if pagination.pages > 1 %}
     <div class="pagination">
         {% if pagination.page > 1 %}
         <a href="{{ url_for('main.links', page=pagination.page - 1, **filters) }}" class="btn btn-secondary">
@@ -194,6 +252,7 @@
         
         <div class="pagination-info">
             Page <strong>{{ pagination.page }}</strong> of {{ pagination.pages }}
+            (Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} - {{ [pagination.page * pagination.per_page, pagination.total]|min }} of {{ pagination.total }})
         </div>
         
         {% if pagination.page < pagination.pages %}
@@ -202,6 +261,7 @@
         </a>
         {% endif %}
     </div>
+    {% endif %}
 </div>
 
 <style>
@@ -268,51 +328,568 @@
     margin-bottom: var(--spacing-lg);
 }
 
+.header-title-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.header-title-group h1 {
+    margin-bottom: 0;
+}
+
 .text-muted { color: var(--text-muted); }
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+}
 
 .pagination-info {
     color: var(--text-muted);
+    font-size: 0.875rem;
 }
+
+/* Sortable Headers */
+.sort-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.sort-header:hover {
+    color: var(--primary-color);
+}
+
+.sort-header.active {
+    color: var(--text-color);
+}
+
+.sort-icon-placeholder {
+    opacity: 0.3;
+}
+
+/* Bulk Actions Bar */
+.bulk-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.bulk-action-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+/* Bulk Action Icon Buttons */
+.bulk-icon-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.625rem 1rem; /* 10px 16px converted to rem for consistency */
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem; /* 8px converted to rem */
+    transition: all 0.2s;
+    font-weight: 600;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.bulk-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+.bulk-icon-btn.active {
+    background: white;
+    color: var(--primary-color);
+    border-color: white;
+}
+
+.bulk-icon-btn-danger:hover {
+    background: rgba(231, 76, 60, 0.3);
+    border-color: rgba(231, 76, 60, 0.5);
+}
+
+.bulk-icon-btn-danger.active {
+    background: var(--danger-color);
+    color: white;
+}
+
+.bulk-icon-btn i {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+
+.bulk-icon-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+@media (max-width: 600px) {
+    .pagination {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .pagination-info {
+        order: -1;
+    }
+}
+
 </style>
 
 <script>
+// Track the last clicked checkbox index for shift-click selection
+let lastCheckedIndex = -1;
+
+function handleCheckboxClick(event, checkbox) {
+    const checkboxes = Array.from(document.querySelectorAll('.link-checkbox'));
+    const currentIndex = checkboxes.indexOf(checkbox);
+    
+    // If Shift key is held and we have a previous selection
+    if (event.shiftKey && lastCheckedIndex !== -1 && lastCheckedIndex !== currentIndex) {
+        // Prevent default behavior to avoid double-toggle
+        event.preventDefault();
+        
+        // Determine the range
+        const startIndex = Math.min(lastCheckedIndex, currentIndex);
+        const endIndex = Math.max(lastCheckedIndex, currentIndex);
+        
+        // Get the state of the last checked checkbox (this is the state we want to apply)
+        const lastChecked = checkboxes[lastCheckedIndex];
+        const targetState = lastChecked.checked;
+        
+        // Select/deselect all checkboxes in the range (including current)
+        for (let i = startIndex; i <= endIndex; i++) {
+            checkboxes[i].checked = targetState;
+        }
+        
+        // Update selected count after range selection
+        updateSelectedCount();
+        
+        // Update last checked index to current
+        lastCheckedIndex = currentIndex;
+        return;
+    }
+    
+    // For normal clicks (without shift), update last checked index after the checkbox state changes
+    // The onchange event will handle updating the count
+    // Use setTimeout to ensure this runs after the checkbox state has changed
+    setTimeout(() => {
+        lastCheckedIndex = currentIndex;
+        updateSelectAllCheckbox();
+    }, 0);
+}
+
+function handleCheckboxChange(checkbox) {
+    // If user manually unchecks a checkbox, clear "select all matching" state
+    // This allows them to go back to manual selection
+    if (!checkbox.checked) {
+        const form = document.getElementById('bulk-action-form');
+        if (form.dataset.allMatchingIds) {
+            delete form.dataset.allMatchingIds;
+        }
+    }
+    updateSelectedCount();
+}
+
+function updateSelectAllCheckbox() {
+    const checkboxes = document.querySelectorAll('.link-checkbox');
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const checkedCount = document.querySelectorAll('.link-checkbox:checked').length;
+    
+    if (checkedCount === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedCount === checkboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
 function toggleAll(checkbox) {
     const checkboxes = document.querySelectorAll('.link-checkbox');
     checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    lastCheckedIndex = -1; // Reset last checked index
     updateSelectedCount();
 }
 
 function selectAll() {
     const checkboxes = document.querySelectorAll('.link-checkbox');
-    checkboxes.forEach(cb => cb.checked = true);
-    document.getElementById('select-all-checkbox').checked = true;
+    const allSelected = Array.from(checkboxes).every(cb => cb.checked);
+    
+    // Toggle: if all are selected, deselect all; otherwise select all
+    checkboxes.forEach(cb => cb.checked = !allSelected);
+    document.getElementById('select-all-checkbox').checked = !allSelected;
+    lastCheckedIndex = -1; // Reset last checked index
     updateSelectedCount();
+}
+
+function selectAllMatching() {
+    // Get current filter parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const params = {};
+    
+    // Copy all filter parameters
+    ['status_code', 'domain', 'pocket_status', 'quality_min', 'quality_max', 'search', 'tag'].forEach(key => {
+        const value = urlParams.get(key);
+        if (value !== null && value !== '') {
+            params[key] = value;
+        }
+    });
+    
+    // Build query string
+    const queryString = new URLSearchParams(params).toString();
+    
+    // Check if all visible checkboxes are already selected
+    const visibleCheckboxes = document.querySelectorAll('.link-checkbox');
+    const allVisibleSelected = Array.from(visibleCheckboxes).every(cb => cb.checked);
+    
+    // If all visible are selected and we have "all matching" state, deselect all
+    const form = document.getElementById('bulk-action-form');
+    if (allVisibleSelected && form.dataset.allMatchingIds) {
+        // Deselect all visible checkboxes
+        visibleCheckboxes.forEach(cb => cb.checked = false);
+        delete form.dataset.allMatchingIds;
+        updateSelectAllCheckbox();
+        updateSelectedCount();
+        lastCheckedIndex = -1;
+        return;
+    }
+    
+    // Show loading state
+    const selectAllBtn = document.querySelector('.bulk-icon-btn[onclick*="selectAllMatching"]');
+    const originalText = selectAllBtn.querySelector('span').textContent;
+    selectAllBtn.disabled = true;
+    selectAllBtn.querySelector('span').textContent = 'Loading...';
+    
+    // Fetch all matching link IDs
+    fetch(`/api/links/get-all-ids?${queryString}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Get all checkboxes on current page
+                const allCheckboxes = document.querySelectorAll('.link-checkbox');
+                const checkboxMap = new Map();
+                allCheckboxes.forEach(cb => {
+                    checkboxMap.set(parseInt(cb.value), cb);
+                });
+                
+                // Check all matching links that are on the current page
+                data.link_ids.forEach(linkId => {
+                    const checkbox = checkboxMap.get(linkId);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+                
+                // Store all matching IDs in a hidden field or data attribute for bulk actions
+                // This allows bulk actions to work with all selected links, not just visible ones
+                const form = document.getElementById('bulk-action-form');
+                if (!form.dataset.allMatchingIds) {
+                    form.dataset.allMatchingIds = JSON.stringify(data.link_ids);
+                }
+                
+                // Update select-all checkbox state
+                updateSelectAllCheckbox();
+                updateSelectedCount();
+                
+                // Show success message
+                const countSpan = document.getElementById('selected-count');
+                countSpan.textContent = `${data.total} selected (all matching)`;
+                
+                // Reset last checked index since we're doing a bulk selection
+                lastCheckedIndex = -1;
+            } else {
+                alert('Error selecting all links: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error.message);
+        })
+        .finally(() => {
+            selectAllBtn.disabled = false;
+            selectAllBtn.querySelector('span').textContent = originalText;
+        });
 }
 
 function deselectAll() {
     const checkboxes = document.querySelectorAll('.link-checkbox');
     checkboxes.forEach(cb => cb.checked = false);
     document.getElementById('select-all-checkbox').checked = false;
+    lastCheckedIndex = -1; // Reset last checked index
+    
+    // Clear "select all matching" state
+    const form = document.getElementById('bulk-action-form');
+    if (form.dataset.allMatchingIds) {
+        delete form.dataset.allMatchingIds;
+    }
+    
+    // Clear active state from bulk action buttons
+    document.querySelectorAll('.bulk-icon-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.disabled = false;
+        const icon = btn.querySelector('i[data-lucide="refresh-cw"]');
+        if (icon) icon.classList.remove('spinning');
+    });
+    document.getElementById('bulk-action-input').value = '';
+    // Hide progress bar if visible
+    const progressContainer = document.getElementById('bulk-progress-container');
+    if (progressContainer) {
+        progressContainer.style.display = 'none';
+    }
     updateSelectedCount();
 }
 
-function updateSelectedCount() {
-    const selected = document.querySelectorAll('.link-checkbox:checked').length;
-    const bar = document.getElementById('bulk-actions-bar');
-    const countSpan = document.getElementById('selected-count');
+function getAllSelectedLinkIds() {
+    // Check if we have "select all matching" active
+    const form = document.getElementById('bulk-action-form');
+    const allMatchingIds = form.dataset.allMatchingIds;
     
-    countSpan.textContent = selected + ' selected';
-    
-    if (selected > 0) {
-        bar.style.display = 'block';
-    } else {
-        bar.style.display = 'none';
+    if (allMatchingIds) {
+        // Return all matching IDs if "select all" was used
+        try {
+            return JSON.parse(allMatchingIds);
+        } catch (e) {
+            // Fall back to visible checkboxes if parsing fails
+        }
     }
+    
+    // Otherwise, return only visible checked checkboxes
+    const selected = document.querySelectorAll('.link-checkbox:checked');
+    return Array.from(selected).map(cb => parseInt(cb.value));
+}
+
+function openAllSelectedLinks() {
+    // Only open links that are actually checked on the current page
+    // Don't use getAllSelectedLinkIds() as that includes all matching links
+    const selected = document.querySelectorAll('.link-checkbox:checked');
+    const linkIds = Array.from(selected).map(cb => parseInt(cb.value));
+    
+    if (linkIds.length === 0) {
+        alert('Please select at least one link');
+        return;
+    }
+    
+    // Open each link detail page in a new tab with a small delay to avoid pop-up blocking
+    linkIds.forEach((linkId, index) => {
+        setTimeout(() => {
+            const url = `/links/${linkId}`;
+            window.open(url, '_blank');
+        }, index * 100); // 100ms delay between each tab
+    });
+}
+
+function updateSelectedCount() {
+    const form = document.getElementById('bulk-action-form');
+    const allMatchingIds = form.dataset.allMatchingIds;
+    
+    let selectedCount;
+    if (allMatchingIds) {
+        try {
+            const ids = JSON.parse(allMatchingIds);
+            selectedCount = ids.length;
+        } catch (e) {
+            selectedCount = document.querySelectorAll('.link-checkbox:checked').length;
+        }
+    } else {
+        selectedCount = document.querySelectorAll('.link-checkbox:checked').length;
+    }
+    
+    const countSpan = document.getElementById('selected-count');
+    const openAllBtn = document.querySelector('.bulk-icon-btn[onclick*="openAllSelectedLinks"]');
+    const refreshBtn = document.querySelector('.bulk-icon-btn[onclick*="refresh"]');
+    const deleteBtn = document.querySelector('.bulk-icon-btn[onclick*="delete"]');
+    const cancelBtn = document.querySelector('.btn[onclick="deselectAll()"]');
+    
+    countSpan.textContent = selectedCount + ' selected';
+    
+    // Disable action buttons when nothing is selected (except Select All)
+    if (openAllBtn) openAllBtn.disabled = selectedCount === 0;
+    if (refreshBtn) refreshBtn.disabled = selectedCount === 0;
+    if (deleteBtn) deleteBtn.disabled = selectedCount === 0;
+    if (cancelBtn) cancelBtn.disabled = selectedCount === 0;
+    
+    // Update select-all checkbox state
+    updateSelectAllCheckbox();
+}
+
+// Initialize bulk actions bar on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateSelectedCount();
+});
+
+function setBulkAction(action, btn) {
+    const form = document.getElementById('bulk-action-form');
+    const actionInput = document.getElementById('bulk-action-input');
+    const linkIds = getAllSelectedLinkIds();
+    const selected = linkIds.length;
+    
+    // Allow selectAllMatching to work even with 0 selected
+    if (action === 'selectAllMatching') {
+        // This is handled by selectAllMatching function
+        return;
+    }
+    
+    if (selected === 0) {
+        alert('Please select at least one link');
+        return;
+    }
+    
+    // Remove active state from all buttons
+    document.querySelectorAll('.bulk-icon-btn').forEach(b => {
+        b.classList.remove('active');
+    });
+    
+    // Set active state on clicked button
+    btn.classList.add('active');
+    actionInput.value = action;
+    
+    // Handle refresh action (async via API)
+    if (action === 'refresh') {
+        bulkRefreshLinks();
+        return;
+    }
+    
+    // Handle delete confirmation
+    if (action === 'delete') {
+        if (!confirm(`Are you sure you want to delete ${selected} link(s)? This action cannot be undone.`)) {
+            btn.classList.remove('active');
+            actionInput.value = '';
+            return;
+        }
+    }
+    
+    // For form submission, we need to add hidden inputs for all selected IDs
+    // Remove any existing hidden link_id inputs
+    form.querySelectorAll('input[name="link_ids"][type="hidden"]').forEach(input => input.remove());
+    
+    // Add hidden inputs for all selected link IDs
+    linkIds.forEach(linkId => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'link_ids';
+        input.value = linkId;
+        form.appendChild(input);
+    });
+    
+    // Submit form for other actions (archive/unarchive)
+    if (confirmBulkAction()) {
+        form.submit();
+    } else {
+        btn.classList.remove('active');
+        actionInput.value = '';
+        // Clean up hidden inputs
+        form.querySelectorAll('input[name="link_ids"][type="hidden"]').forEach(input => input.remove());
+    }
+}
+
+function bulkRefreshLinks() {
+    const linkIds = getAllSelectedLinkIds();
+    
+    if (linkIds.length === 0) {
+        alert('Please select at least one link');
+        return;
+    }
+    
+    const refreshBtn = document.querySelector('.bulk-icon-btn[onclick*="refresh"]');
+    const icon = refreshBtn.querySelector('i[data-lucide="refresh-cw"]');
+    const progressContainer = document.getElementById('bulk-progress-container');
+    const progressFill = document.getElementById('bulk-progress-fill');
+    const progressText = document.getElementById('bulk-progress-text');
+    const progressCount = document.getElementById('bulk-progress-count');
+    
+    // Show progress bar and disable button
+    refreshBtn.disabled = true;
+    if (icon) icon.classList.add('spinning');
+    progressContainer.style.display = 'block';
+    
+    const total = linkIds.length;
+    
+    // Initialize progress
+    progressFill.style.width = '0%';
+    progressCount.textContent = `0 / ${total}`;
+    progressText.textContent = `Starting bulk refresh for ${total} links...`;
+    
+    // Start background refresh via API
+    fetch('/api/links/bulk-refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link_ids: linkIds })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show that processing has started
+            progressText.textContent = `Processing ${total} links in background... You can navigate away safely.`;
+            progressFill.style.width = '10%'; // Show some initial progress
+            
+            // Since it's background processing, we can't track exact progress
+            // But we can show a message and allow the user to navigate away
+            setTimeout(() => {
+                progressText.textContent = `✓ Refresh started! Processing ${total} links in background. Safe to navigate away.`;
+                progressFill.style.width = '50%'; // Show partial progress
+                
+                // After a delay, allow user to continue or reload
+                setTimeout(() => {
+                    refreshBtn.disabled = false;
+                    if (icon) icon.classList.remove('spinning');
+                    refreshBtn.classList.remove('active');
+                    document.getElementById('bulk-action-input').value = '';
+                    
+                    progressText.textContent = `✓ Background refresh running. ${total} links will be refreshed. Feel free to navigate away - processing continues.`;
+                    progressFill.style.width = '100%';
+                    progressCount.textContent = `${total} / ${total}`;
+                    
+                    // Hide progress bar after showing completion message
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                    }, 3000);
+                }, 2000);
+            }, 1000);
+        } else {
+            alert('Error starting bulk refresh: ' + (data.error || 'Unknown error'));
+            refreshBtn.disabled = false;
+            if (icon) icon.classList.remove('spinning');
+            refreshBtn.classList.remove('active');
+            progressContainer.style.display = 'none';
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+        refreshBtn.disabled = false;
+        if (icon) icon.classList.remove('spinning');
+        refreshBtn.classList.remove('active');
+        progressContainer.style.display = 'none';
+    });
 }
 
 function confirmBulkAction() {
     const form = document.getElementById('bulk-action-form');
-    const action = document.getElementById('bulk-action-select').value;
+    const action = document.getElementById('bulk-action-input').value;
     const selected = document.querySelectorAll('.link-checkbox:checked').length;
     
     if (!action) {
@@ -325,11 +902,9 @@ function confirmBulkAction() {
         return false;
     }
     
-    if (action === 'delete') {
-        return confirm(`Are you sure you want to delete ${selected} link(s)? This action cannot be undone.`);
-    }
-    
+    // Delete confirmation is already handled in setBulkAction, so skip it here
     return true;
 }
+
 </script>
 {% endblock %}

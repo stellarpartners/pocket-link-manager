@@ -102,6 +102,9 @@ class CrawlResult(Base):
     error_message = Column(Text)
     crawl_date = Column(DateTime, default=datetime.utcnow, index=True)
     crawl_attempt = Column(Integer, default=1)
+    crawl_method = Column(String(20))  # 'http' or 'browser'
+    browser_wait_time = Column(Integer)  # Wait time used for browser crawl (seconds)
+    batch_crawl_date = Column(DateTime)  # When batch crawl was performed
     
     # Relationship
     link = relationship("Link", back_populates="crawl_results")

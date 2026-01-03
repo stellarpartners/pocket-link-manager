@@ -5,18 +5,23 @@
 {% block content %}
 <div class="tags-page">
     <div class="header-with-actions">
-        <h1>Tags Library</h1>
-        <div class="header-actions">
+        <div class="header-title-group">
+            <h1>Tags Library</h1>
             <span class="badge badge-info"><i data-lucide="tag" size="14"></i> {{ tags|length }} unique tags</span>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('main.add_link') }}" class="btn btn-primary">
+                <i data-lucide="plus"></i> Add New Link
+            </a>
         </div>
     </div>
     
-    <div class="card tags-overview">
+    <div class="card tags-overview card-padding-md">
         <div class="stat-item">
             <label>Total tagged links</label>
             <span class="stat-value">{{ tags|sum(attribute='count') }}</span>
         </div>
-        <div class="search-box">
+        <div class="search-box-inline">
             <i data-lucide="search"></i>
             <input type="text" id="tag-search" placeholder="Search tags..." onkeyup="filterTags()">
         </div>
@@ -36,6 +41,9 @@
                     </a>
                     <span class="tag-count text-muted">{{ tag_info.count }} link{{ 's' if tag_info.count != 1 else '' }}</span>
                 </div>
+                <button type="button" class="tag-rename-btn" data-tag-name="{{ tag_info.tag }}" onclick="openRenameTagModal(this)" title="Rename tag">
+                    <i data-lucide="pencil"></i>
+                </button>
             </div>
             <div class="tag-footer">
                 <a href="{{ url_for('main.links', tag=tag_info.tag) }}" class="btn btn-sm btn-secondary" style="width: 100%;">
@@ -56,13 +64,76 @@
     {% endif %}
 </div>
 
+<!-- Rename Tag Modal -->
+<div id="rename-tag-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i data-lucide="pencil"></i> Rename Tag</h2>
+            <button type="button" class="modal-close" onclick="closeRenameTagModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>
+                Rename this tag across all links. The tag will be updated everywhere it appears.
+            </p>
+            <form id="rename-tag-form" method="POST" action="{{ url_for('main.rename_tag') }}">
+                <input type="hidden" id="old-tag-input" name="old_tag" value="">
+                <div class="form-group">
+                    <label for="new-tag-input">New Tag Name</label>
+                    <div class="input-with-icon">
+                        <i data-lucide="tag"></i>
+                        <input 
+                            type="text" 
+                            id="new-tag-input" 
+                            name="new_tag" 
+                            placeholder="Enter new tag name"
+                            required
+                            autocomplete="off"
+                        >
+                    </div>
+                    <small>Current tag: <strong id="current-tag-display"></strong></small>
+                </div>
+            </form>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeRenameTagModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" form="rename-tag-form">
+                <i data-lucide="check"></i> Rename Tag
+            </button>
+        </div>
+    </div>
+</div>
+
 <style>
+.header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.header-title-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.header-title-group h1 {
+    margin-bottom: 0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
 .tags-overview {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: var(--spacing-xl);
-    padding: var(--spacing-md) var(--spacing-lg);
 }
 
 .stat-item {
@@ -76,25 +147,7 @@
     line-height: 1;
 }
 
-.search-box {
-    position: relative;
-    flex: 1;
-    max-width: 400px;
-}
-
-.search-box i {
-    position: absolute;
-    left: var(--spacing-md);
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    width: 18px;
-    height: 18px;
-}
-
-.search-box input {
-    padding-left: 2.75rem;
-}
+/* Search box styles are now in main CSS */
 
 .tag-card {
     display: flex;
@@ -105,8 +158,9 @@
 .tag-header {
     display: flex;
     gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
     flex: 1;
+    align-items: flex-start;
 }
 
 .tag-icon {
@@ -129,6 +183,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    flex: 1;
 }
 
 .tag-title {
@@ -138,8 +193,34 @@
     margin-bottom: 2px;
 }
 
+.tag-rename-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.tag-rename-btn:hover {
+    background: var(--bg-color);
+    color: var(--secondary-color);
+    opacity: 1;
+}
+
+.tag-rename-btn i {
+    width: 18px;
+    height: 18px;
+}
+
 .tag-footer {
     padding-top: var(--spacing-md);
+    margin-top: auto;
     border-top: 1px solid var(--border-color);
 }
 
@@ -166,6 +247,156 @@
         align-items: stretch;
     }
 }
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(6px);
+    padding: var(--spacing-lg);
+}
+
+.modal-content {
+    background: var(--bg-color);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+    width: 100%;
+    max-width: 540px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.25s ease-out;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.modal-header h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-color);
+}
+
+.modal-header h2 i {
+    width: 24px;
+    height: 24px;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+.modal-close i {
+    width: 20px;
+    height: 20px;
+}
+
+.modal-body {
+    padding: var(--spacing-xl);
+    flex: 1;
+    overflow-y: auto;
+}
+
+.modal-body p {
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.6;
+}
+
+.modal-body .form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.modal-body .form-group label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.modal-body .form-group small {
+    display: block;
+    margin-top: var(--spacing-xs);
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.modal-actions .btn {
+    min-width: 100px;
+}
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-icon i {
+    position: absolute;
+    left: var(--spacing-md);
+    color: var(--text-muted);
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+}
+
+.input-with-icon input {
+    padding-left: 2.75rem;
+    width: 100%;
+}
 </style>
 
 <script>
@@ -184,5 +415,50 @@ function filterTags() {
         }
     }
 }
+
+// Rename Tag Modal Functions
+function openRenameTagModal(button) {
+    const modal = document.getElementById('rename-tag-modal');
+    const oldTagInput = document.getElementById('old-tag-input');
+    const newTagInput = document.getElementById('new-tag-input');
+    const currentTagDisplay = document.getElementById('current-tag-display');
+    
+    // Get tag name from data attribute to handle special characters safely
+    const oldTag = button.getAttribute('data-tag-name');
+    
+    oldTagInput.value = oldTag;
+    newTagInput.value = oldTag;
+    currentTagDisplay.textContent = oldTag;
+    
+    modal.style.display = 'flex';
+    newTagInput.focus();
+    newTagInput.select();
+    
+    // Refresh icons after showing modal
+    setTimeout(() => lucide.createIcons(), 100);
+}
+
+function closeRenameTagModal() {
+    const modal = document.getElementById('rename-tag-modal');
+    modal.style.display = 'none';
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('rename-tag-modal');
+    if (event.target === modal) {
+        closeRenameTagModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modal = document.getElementById('rename-tag-modal');
+        if (modal.style.display === 'flex') {
+            closeRenameTagModal();
+        }
+    }
+});
 </script>
 {% endblock %}

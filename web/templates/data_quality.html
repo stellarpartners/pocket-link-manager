@@ -1,23 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Pocket Link Manager{% endblock %}
+{% block title %}Data Quality - Pocket Link Manager{% endblock %}
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard">
+<div class="data-quality-page">
     <div class="header-with-actions">
-        <h1>Dashboard Overview</h1>
+        <div class="header-title-group">
+            <h1><i data-lucide="bar-chart"></i> Data Quality</h1>
+            <span class="badge badge-info">System Health Dashboard</span>
+        </div>
         <div class="header-actions">
             <a href="{{ url_for('main.add_link') }}" class="btn btn-primary">
                 <i data-lucide="plus"></i> Add New Link
             </a>
-            <span class="text-muted">Last updated: {{ now().strftime('%Y-%m-%d %H:%M') if now else 'Just now' }}</span>
         </div>
     </div>
     
+    <!-- Overview Stats Grid -->
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-icon" style="color: var(--secondary-color);">
@@ -48,8 +51,25 @@
             <h3>Archived</h3>
             <p class="stat-number">{{ stats.pocket_status.archive | default(0) | number_format }}</p>
         </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--success-color);">
+                <i data-lucide="file-text"></i>
+            </div>
+            <h3>Content Extraction</h3>
+            <p class="stat-number">{{ stats.content_stats.content_rate }}%</p>
+            <p class="text-muted">{{ stats.content_stats.with_content | number_format }} links with full content</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--primary-color);">
+                <i data-lucide="markdown"></i>
+            </div>
+            <h3>Markdown Output</h3>
+            <p class="stat-number">{{ stats.markdown_stats.markdown_rate }}%</p>
+            <p class="text-muted">{{ stats.markdown_stats.with_markdown | number_format }} files ready for Obsidian</p>
+        </div>
     </div>
 
+    <!-- Charts Grid -->
     <div class="charts-grid">
         <div class="chart-card">
             <div class="card-header">
@@ -69,6 +89,54 @@
         </div>
     </div>
 
+    <!-- Status Code Breakdown Table -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i data-lucide="list"></i> Status Code Breakdown</h2>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Status Code</th>
+                        <th>Links Count</th>
+                        <th>Distribution</th>
+                        <th style="width: 150px;">Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for code, count in stats.status_code_breakdown.items() | sort %}
+                    <tr>
+                        <td style="font-weight: 700;">
+                            {% set status_class = '0xx' %}
+                            {% if code == '200' %}{% set status_class = '2xx' %}
+                            {% elif code == '403' or code == '404' or code == '4XX' %}{% set status_class = '4xx' %}
+                            {% elif code == '5XX' %}{% set status_class = '5xx' %}
+                            {% elif code|int >= 200 and code|int < 300 %}{% set status_class = '2xx' %}
+                            {% elif code|int >= 300 and code|int < 400 %}{% set status_class = '3xx' %}
+                            {% elif code|int >= 400 and code|int < 500 %}{% set status_class = '4xx' %}
+                            {% elif code|int >= 500 %}{% set status_class = '5xx' %}
+                            {% endif %}
+                            <span class="status-code status-{{ status_class }}">
+                                {{ code }}
+                            </span>
+                        </td>
+                        <td>{{ count | number_format }}</td>
+                        <td>
+                            {% set pct = (count / stats.total_links * 100) %}
+                            <div class="progress-bar-container" style="margin-top: 0;">
+                                <div class="progress-bar" style="width: {{ pct }}%; background-color: var(--secondary-color);"></div>
+                            </div>
+                        </td>
+                        <td style="font-weight: 600;">{{ "%.1f" | format(pct) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Top Domains Table -->
     <div class="card">
         <div class="card-header">
             <h2><i data-lucide="globe"></i> Top Domains</h2>
@@ -117,6 +185,22 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--spacing-lg);
+}
+
+.header-title-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.header-title-group h1 {
+    margin-bottom: 0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
 }
 
 .stat-icon {
@@ -173,6 +257,12 @@
     top: -18px;
     color: var(--text-muted);
 }
+
+.stat-percent {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
 </style>
 
 <script>
@@ -211,17 +301,18 @@ new Chart(statusCtx, {
     type: 'bar',
     data: statusData,
     options: {
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
             legend: { display: false }
         },
         scales: {
-            y: { 
+            x: { 
                 beginAtZero: true,
                 grid: { display: true, drawBorder: false, color: '#f1f2f6' }
             },
-            x: {
+            y: {
                 grid: { display: false }
             }
         }

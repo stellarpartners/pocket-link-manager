@@ -5,11 +5,21 @@
 {% block content %}
 <div class="link-detail">
     <div class="breadcrumb">
-        <a href="{{ url_for('main.links') }}"><i data-lucide="chevron-left"></i> Back to Links</a>
+        <a href="{{ back_url }}"><i data-lucide="chevron-left"></i> Back</a>
     </div>
 
     <div class="link-header-section">
         <div class="header-main">
+            <div class="header-meta">
+                <span class="badge badge-{{ link.pocket_status }}"><i data-lucide="{{ 'archive' if link.pocket_status == 'archive' else 'book-open' }}"></i> {{ link.pocket_status }}</span>
+                {% if quality_metric %}
+                <span class="quality-score quality-{{ 'high' if quality_metric.quality_score >= 60 else 'medium' if quality_metric.quality_score >= 40 else 'low' }}">
+                    <i data-lucide="star"></i> Quality: {{ quality_metric.quality_score }}/100
+                </span>
+                {% endif %}
+                <span class="text-muted"><i data-lucide="calendar"></i> Saved on {{ link.date_saved.strftime('%Y-%m-%d') if link.date_saved else 'N/A' }}</span>
+            </div>
+            
             <div id="title-display-container">
                 <h1 id="title-display">{{ link.title }}</h1>
                 <button type="button" class="btn btn-sm btn-secondary" id="edit-title-btn" style="margin-top: -10px;"><i data-lucide="edit-2"></i> Edit Title</button>
@@ -24,34 +34,29 @@
                     </div>
                 </div>
             </form>
-            
-            <div class="header-meta">
-                <span class="badge badge-{{ link.pocket_status }}"><i data-lucide="{{ 'archive' if link.pocket_status == 'archive' else 'book-open' }}"></i> {{ link.pocket_status }}</span>
-                {% if quality_metric %}
-                <span class="quality-score quality-{{ 'high' if quality_metric.quality_score >= 60 else 'medium' if quality_metric.quality_score >= 40 else 'low' }}">
-                    <i data-lucide="star"></i> Quality: {{ quality_metric.quality_score }}/100
-                </span>
-                {% endif %}
-                <span class="text-muted"><i data-lucide="calendar"></i> Saved on {{ link.date_saved.strftime('%Y-%m-%d') if link.date_saved else 'N/A' }}</span>
-            </div>
         </div>
     </div>
 
     <div class="primary-actions-bar card">
         <div class="action-group">
-            <a href="{{ link.original_url }}" target="_blank" class="btn btn-primary btn-lg"><i data-lucide="external-link"></i> Visit Original Link</a>
-            <button type="button" class="btn btn-secondary btn-lg" id="refresh-metadata-btn" onclick="refreshMetadata({{ link.id }})">
+            <a href="{{ link.original_url }}" target="_blank" class="btn btn-primary btn-lg"><i data-lucide="external-link"></i> Visit Original</a>
+            {% if crawl_result and crawl_result.final_url %}
+            <a href="{{ crawl_result.final_url }}" target="_blank" class="btn btn-primary btn-lg"><i data-lucide="external-link"></i> Visit Final</a>
+            {% endif %}
+            <button type="button" class="btn btn-secondary btn-lg" id="refresh-metadata-btn" onclick="refreshMetadata({{ link.id }}, this)">
                 <i data-lucide="refresh-cw" class="refresh-icon"></i> Refresh from URL
             </button>
+            {% if link.pocket_status != 'archive' %}
             <form method="POST" action="{{ url_for('main.archive_link', link_id=link.id) }}" style="display: inline;">
                 <button type="submit" class="btn btn-secondary btn-lg">
-                    <i data-lucide="{{ 'rotate-ccw' if link.pocket_status == 'archive' else 'archive' }}"></i>
-                    {{ 'Unarchive' if link.pocket_status == 'archive' else 'Archive Link' }}
+                    <i data-lucide="archive"></i>
+                    Archive Link
                 </button>
             </form>
+            {% endif %}
         </div>
         <div class="action-group">
-            <button type="button" id="convert-to-markdown-btn-top" class="btn btn-obsidian btn-lg" onclick="convertToMarkdown({{ link.id }})">
+            <button type="button" id="convert-to-markdown-btn-top" class="btn btn-obsidian btn-lg" onclick="convertToMarkdown({{ link.id }}, this)">
                 <i data-lucide="refresh-cw" class="convert-icon"></i>
                 <span class="convert-btn-text">{{ 'Sync to Obsidian' if content_extraction and content_extraction.markdown_file_path else 'Extract & Sync to Obsidian' }}</span>
                 <span class="convert-btn-spinner" style="display: none;">Syncing...</span>
@@ -65,6 +70,24 @@
                 <div class="card-header">
                     <h2><i data-lucide="info"></i> URL & Connection</h2>
                 </div>
+                <div class="info-group">
+                    <label>Domain</label>
+                    {% if normalized_domain %}
+                    <a href="{{ url_for('main.links', domain=normalized_domain) }}" style="text-decoration: none; color: inherit;">
+                        <div class="url-row" style="cursor: pointer;">
+                            <i data-lucide="globe" size="16"></i>
+                            <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">{{ normalized_domain }}</span>
+                            <i data-lucide="external-link" size="14" style="margin-left: auto; opacity: 0.6;"></i>
+                        </div>
+                    </a>
+                    {% else %}
+                    <div class="url-row" style="cursor: default;">
+                        <i data-lucide="globe" size="16"></i>
+                        <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">{{ link.domain or 'N/A' }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
                 <div class="info-group">
                     <label>Original URL</label>
                     <div class="url-row">
@@ -191,7 +214,7 @@
                 </div>
 
                 <div class="card-actions">
-                    <button type="button" id="convert-to-markdown-btn-bottom" class="btn btn-obsidian" onclick="convertToMarkdown({{ link.id }})">
+                    <button type="button" id="convert-to-markdown-btn-bottom" class="btn btn-obsidian" onclick="convertToMarkdown({{ link.id }}, this)">
                         <i data-lucide="refresh-cw" class="convert-icon"></i>
                         <span class="convert-btn-text">{{ 'Update Content & Sync' if content_extraction else 'Extract Content & Sync' }}</span>
                         <span class="convert-btn-spinner" style="display: none;">Syncing...</span>
@@ -205,7 +228,8 @@
                 <div class="card-header">
                     <h3><i data-lucide="tags"></i> Manage Tags</h3>
                 </div>
-                <div class="tags-management">
+                <div class="card-body">
+                    <div class="tags-management">
                     <div class="tags-container">
                         {% set tags = link.get_tags_list() %}
                         {% if tags %}
@@ -221,35 +245,62 @@
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <p class="text-muted italic" style="margin-bottom: var(--spacing-md);">No tags assigned</p>
+                            <p class="text-muted italic" style="margin-bottom: 0;">No tags assigned</p>
                         {% endif %}
                     </div>
                     
-                    <form method="POST" action="{{ url_for('main.add_tag', link_id=link.id) }}" class="add-tag-form">
-                        <div class="input-with-icon">
-                            <i data-lucide="plus" size="14"></i>
-                            <input type="text" name="tag_name" list="all-tags-list" placeholder="New tag..." required style="padding-left: 2.2rem; height: 32px;">
-                            <datalist id="all-tags-list">
-                                {% for tag in all_tags %}
-                                <option value="{{ tag }}">
-                                {% endfor %}
-                            </datalist>
+                    {% if recent_tags %}
+                    <div class="recent-tags-section">
+                        <label>Recently Used</label>
+                        <div class="recent-tags-list">
+                            {% for tag in recent_tags %}
+                            {% if tag not in link.get_tags_list() %}
+                            <form method="POST" action="{{ url_for('main.add_tag', link_id=link.id) }}" style="display: inline;">
+                                <input type="hidden" name="tag_name" value="{{ tag }}">
+                                <button type="submit" class="recent-tag-btn" title="Add tag: {{ tag }}">
+                                    <i data-lucide="tag" size="12"></i>
+                                    {{ tag }}
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% endfor %}
                         </div>
-                        <button type="submit" class="btn btn-sm btn-secondary" style="margin-top: 8px; width: 100%;">Add Tag</button>
+                    </div>
+                    {% endif %}
+                    
+                    <form method="POST" action="{{ url_for('main.add_tag', link_id=link.id) }}" class="add-tag-form">
+                        <div class="form-group">
+                            <div class="input-with-icon">
+                                <i data-lucide="tag"></i>
+                                <input type="text" name="tag_name" list="all-tags-list" placeholder="New tag..." required>
+                                <datalist id="all-tags-list">
+                                    {% for tag in all_tags %}
+                                    <option value="{{ tag }}">
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary" style="width: 100%;">
+                            <i data-lucide="plus"></i> Add Tag
+                        </button>
                     </form>
+                    </div>
                 </div>
             </div>
 
             <div class="card danger-zone">
                 <div class="card-header">
-                    <h3><i data-lucide="shield-alert"></i> Danger Zone</h3>
+                    <h3><i data-lucide="trash-2"></i> Delete</h3>
                 </div>
-                <p class="text-muted small">Once deleted, a link cannot be recovered.</p>
-                <form method="POST" action="{{ url_for('main.delete_link', link_id=link.id) }}" onsubmit="return confirm('Delete this link forever?');">
-                    <button type="submit" class="btn btn-danger btn-sm" style="width: 100%;">
-                        <i data-lucide="trash-2"></i> Delete Link
-                    </button>
-                </form>
+                <div class="card-body">
+                    <p class="text-muted small" style="margin-bottom: var(--spacing-md);">Once deleted, a link cannot be recovered.</p>
+                    <form method="POST" action="{{ url_for('main.delete_link', link_id=link.id) }}" onsubmit="return confirm('Delete this link forever?');">
+                        <input type="hidden" name="next" value="{{ back_url }}">
+                        <button type="submit" class="btn btn-danger btn-sm" style="width: 100%;">
+                            <i data-lucide="trash-2"></i> Delete Link
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -297,9 +348,29 @@
 
 #title-display-container {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--spacing-md);
     margin-bottom: var(--spacing-sm);
+    flex-wrap: nowrap;
+}
+
+#title-display {
+    cursor: pointer;
+    transition: color 0.2s;
+    flex: 1;
+    min-width: 0; /* Allow title to shrink if needed */
+    word-wrap: break-word;
+}
+
+#edit-title-btn {
+    flex-shrink: 0; /* Prevent button from shrinking */
+    white-space: nowrap; /* Prevent button text from wrapping */
+    margin-top: 0; /* Remove negative margin */
+    align-self: center; /* Vertically center the button */
+}
+
+#title-display:hover {
+    color: var(--primary-color);
 }
 
 .title-input {
@@ -320,11 +391,7 @@
     color: var(--text-muted);
 }
 
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+/* Card header and body styles are now in main CSS */
 
 .header-actions {
     display: flex;
@@ -337,7 +404,7 @@
     align-items: center;
     gap: var(--spacing-lg);
     flex-wrap: wrap;
-    margin-top: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
 }
 
 .header-meta .badge, .header-meta .quality-score, .header-meta .text-muted {
@@ -378,6 +445,25 @@
     padding: var(--spacing-md);
     border-radius: var(--border-radius-md);
     border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.url-row:hover {
+    border-color: var(--secondary-color);
+    background: white;
+    box-shadow: var(--shadow-sm);
+}
+
+a .url-row:hover {
+    border-color: var(--primary-color);
+    background: rgba(52, 152, 219, 0.03);
+}
+
+.url-display:hover {
+    border-color: var(--secondary-color);
+    background: white;
+    box-shadow: var(--shadow-sm);
 }
 
 .url-text {
@@ -413,6 +499,18 @@
     font-weight: 700;
     font-size: 1.25rem;
     color: var(--text-color);
+}
+
+.extraction-content {
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+}
+
+.extraction-content:hover {
+    background: rgba(52, 152, 219, 0.03);
+    box-shadow: inset 0 0 0 1px var(--border-color);
 }
 
 .extraction-content h3 {
@@ -465,13 +563,18 @@
 .tags-management {
     display: flex;
     flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.tags-container {
+    margin-bottom: var(--spacing-sm);
 }
 
 .tags-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: var(--spacing-lg);
+    gap: var(--spacing-sm);
+    margin-bottom: 0;
 }
 
 .tag-item {
@@ -519,10 +622,76 @@
     background-color: rgba(231, 76, 60, 0.1);
 }
 
-.add-tag-form {
-    margin-top: var(--spacing-md);
-    padding-top: var(--spacing-lg);
+.recent-tags-section {
+    padding-top: var(--spacing-md);
     border-top: 1px solid var(--border-color);
+}
+
+.recent-tags-section label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.recent-tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+}
+
+.recent-tag-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(52, 152, 219, 0.08);
+    color: var(--secondary-color);
+    border: 1px solid rgba(52, 152, 219, 0.2);
+    border-radius: 16px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.recent-tag-btn:hover {
+    background: rgba(52, 152, 219, 0.15);
+    border-color: var(--secondary-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.1);
+}
+
+.recent-tag-btn i {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+}
+
+.recent-tag-btn:hover i {
+    opacity: 1;
+}
+
+.add-tag-form {
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.add-tag-form .form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.add-tag-form .input-with-icon {
+    width: 100%;
+}
+
+.add-tag-form .input-with-icon input {
+    width: 100%;
+    font-size: 0.875rem;
 }
 
 .danger-zone {
@@ -530,8 +699,21 @@
     background-color: rgba(231, 76, 60, 0.02);
 }
 
+.danger-zone .card-header {
+    border-bottom-color: rgba(231, 76, 60, 0.2);
+}
+
+.danger-zone .card-body {
+    padding: var(--spacing-md) 0;
+}
+
 .danger-zone h3 {
     color: var(--danger-color);
+    margin-bottom: 0;
+}
+
+.danger-zone form {
+    margin-top: var(--spacing-md);
 }
 
 @media (max-width: 1024px) {
@@ -560,15 +742,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelBtn = document.getElementById('cancel-url-btn');
     const urlDisplay = document.getElementById('url-display');
     const urlForm = document.getElementById('final-url-form');
+    const urlInput = urlForm ? urlForm.querySelector('input[name="final_url"]') : null;
     
-    if (editBtn && urlDisplay && urlForm) {
-        editBtn.addEventListener('click', function() {
+    if (urlDisplay && urlForm) {
+        const triggerUrlEdit = function() {
             urlDisplay.style.display = 'none';
             urlForm.style.display = 'block';
+            if (urlInput) urlInput.focus();
+        };
+
+        if (editBtn) editBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            triggerUrlEdit();
         });
+
+        urlDisplay.addEventListener('click', triggerUrlEdit);
         
         if (cancelBtn) {
-            cancelBtn.addEventListener('click', function() {
+            cancelBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 urlDisplay.style.display = 'flex';
                 urlForm.style.display = 'none';
             });
@@ -579,17 +771,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const editTitleBtn = document.getElementById('edit-title-btn');
     const cancelTitleBtn = document.getElementById('cancel-title-btn');
     const titleDisplayContainer = document.getElementById('title-display-container');
+    const titleDisplay = document.getElementById('title-display');
     const titleEditForm = document.getElementById('title-edit-form');
+    const titleInput = titleEditForm ? titleEditForm.querySelector('input[name="title"]') : null;
 
-    if (editTitleBtn && titleDisplayContainer && titleEditForm) {
-        editTitleBtn.addEventListener('click', function() {
+    if (titleDisplayContainer && titleEditForm) {
+        const triggerTitleEdit = function() {
             titleDisplayContainer.style.display = 'none';
             titleEditForm.style.display = 'block';
+            if (titleInput) titleInput.focus();
+        };
+
+        if (editTitleBtn) editTitleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            triggerTitleEdit();
         });
 
+        if (titleDisplay) titleDisplay.addEventListener('click', triggerTitleEdit);
+
         if (cancelTitleBtn) {
-            cancelTitleBtn.addEventListener('click', function() {
-                titleDisplayContainer.style.display = 'block';
+            cancelTitleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                titleDisplayContainer.style.display = 'flex';
                 titleEditForm.style.display = 'none';
             });
         }
@@ -600,12 +803,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelMetadataBtn = document.getElementById('cancel-metadata-btn');
     const metadataDisplay = document.getElementById('metadata-display');
     const metadataEditForm = document.getElementById('metadata-edit-form');
+    const metadataTitleInput = metadataEditForm ? metadataEditForm.querySelector('#edit-title') : null;
 
     if (editMetadataBtn && metadataDisplay && metadataEditForm) {
-        editMetadataBtn.addEventListener('click', function() {
+        const triggerMetadataEdit = function() {
             metadataDisplay.style.display = 'none';
             metadataEditForm.style.display = 'block';
+            if (metadataTitleInput) metadataTitleInput.focus();
+        };
+
+        editMetadataBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            triggerMetadataEdit();
         });
+
+        metadataDisplay.addEventListener('click', triggerMetadataEdit);
 
         if (cancelMetadataBtn) {
             cancelMetadataBtn.addEventListener('click', function() {
@@ -614,102 +826,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
-});
-
-function convertToMarkdown(linkId) {
-    const btns = [
-        document.getElementById('convert-to-markdown-btn-top'),
-        document.getElementById('convert-to-markdown-btn-bottom')
-    ];
     
-    btns.forEach(btn => {
-        if (!btn) return;
-        const btnText = btn.querySelector('.convert-btn-text');
-        const btnSpinner = btn.querySelector('.convert-btn-spinner');
-        const icon = btn.querySelector('.convert-icon');
-        
-        btn.disabled = true;
-        if (btnText) btnText.style.display = 'none';
-        if (btnSpinner) btnSpinner.style.display = 'inline';
-        if (icon) icon.classList.add('spinning');
-    });
-    
-    fetch(`/links/${linkId}/convert-to-markdown`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
-            btns.forEach(btn => {
-                if (!btn) return;
-                const btnText = btn.querySelector('.convert-btn-text');
-                const btnSpinner = btn.querySelector('.convert-btn-spinner');
-                const icon = btn.querySelector('.convert-icon');
-                
-                btn.disabled = false;
-                if (btnText) btnText.style.display = 'inline';
-                if (btnSpinner) btnSpinner.style.display = 'none';
-                if (icon) icon.classList.remove('spinning');
-            });
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error.message);
-        btns.forEach(btn => {
-            if (!btn) return;
-            const btnText = btn.querySelector('.convert-btn-text');
-            const btnSpinner = btn.querySelector('.convert-btn-spinner');
-            const icon = btn.querySelector('.convert-icon');
-            
-            btn.disabled = false;
-            if (btnText) btnText.style.display = 'inline';
-            if (btnSpinner) btnSpinner.style.display = 'none';
-            if (icon) icon.classList.remove('spinning');
+    // Tags auto-focus
+    const emptyTags = document.querySelector('.tags-container .empty-state, .tags-container .text-muted.italic');
+    const tagInput = document.querySelector('.add-tag-form input[name="tag_name"]');
+    if (emptyTags && tagInput) {
+        emptyTags.style.cursor = 'pointer';
+        emptyTags.addEventListener('click', function() {
+            tagInput.focus();
         });
-    });
-}
-
-function refreshMetadata(linkId) {
-    const btn = document.getElementById('refresh-metadata-btn');
-    if (!btn) return;
-    
-    const icon = btn.querySelector('.refresh-icon');
-    btn.disabled = true;
-    if (icon) icon.classList.add('spinning');
-    
-    fetch(`/links/${linkId}/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
-            btn.disabled = false;
-            if (icon) icon.classList.remove('spinning');
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error.message);
-        btn.disabled = false;
-        if (icon) icon.classList.remove('spinning');
-    });
-}
+    }
+});
 </script>
-
-<style>
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-.spinning {
-    animation: spin 1s linear infinite;
-}
-</style>
 {% endblock %}
