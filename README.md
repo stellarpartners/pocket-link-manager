@@ -46,7 +46,7 @@ graph TB
 
 ### Requirements
 
-- Python 3.8+
+- Python 3.12+ (Python 3.13+ recommended for best performance)
 - pip
 
 ### Setup
@@ -151,7 +151,8 @@ pocket-link-manager/
 ├── data/              # Data files (ignored by git)
 ├── logs/              # Log files (ignored by git)
 ├── run.py             # Main entry point
-└── requirements.txt   # Python dependencies
+├── requirements.txt   # Python dependencies
+└── pyproject.toml     # Project metadata and Python version requirements
 ```
 
 ## Directory Documentation
@@ -164,6 +165,7 @@ Each major directory has its own README:
 - [`scripts/README.md`](scripts/README.md) - Utility scripts overview
 - [`tools/README.md`](tools/README.md) - Root-level tools
 - [`tests/README.md`](tests/README.md) - Testing documentation
+- [`docs/PYTHON_VERSION.md`](docs/PYTHON_VERSION.md) - Python version compatibility guide
 
 ## Usage Examples
 
