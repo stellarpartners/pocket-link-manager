@@ -226,7 +226,6 @@
                     <td class="text-muted" style="font-size: 0.85rem;">{{ link.date_saved.strftime('%Y-%m-%d') if link.date_saved else '-' }}</td>
                     <td style="text-align: right;">
                         <div class="action-buttons-list">
-                            <a href="{{ url_for('main.link_detail', link_id=link.id, back=request.full_path) }}" class="icon-btn" title="View details"><i data-lucide="eye"></i></a>
                             <button type="button" class="icon-btn" title="Refresh from URL" id="refresh-metadata-btn-{{ link.id }}" onclick="refreshMetadata({{ link.id }}, this)">
                                 <i data-lucide="refresh-cw"></i>
                             </button>

@@ -18,19 +18,45 @@
     
     <div class="card domains-overview">
         <div class="stat-group">
-            <span class="stat-label">Total links across {% if search %}these{% else %}all{% endif %} domains</span>
+            <span class="stat-label">Total links across {% if search or min_links %}these{% else %}all{% endif %} domains</span>
             <span class="stat-value">{{ domains|sum(attribute='total') }}</span>
         </div>
-        <form method="GET" action="{{ url_for('main.domains') }}" id="domain-search-form" class="search-box-inline">
-            <i data-lucide="search"></i>
-            <input type="text" name="search" id="domain-search" placeholder="Search domains..." value="{{ search }}" onkeypress="if(event.key === 'Enter') { event.preventDefault(); this.form.submit(); }">
-            {% if sort_by %}
-            <input type="hidden" name="sort_by" value="{{ sort_by }}">
-            {% endif %}
-            {% if sort_order %}
-            <input type="hidden" name="sort_order" value="{{ sort_order }}">
-            {% endif %}
-        </form>
+        <div class="filter-controls">
+            <form method="GET" action="{{ url_for('main.domains') }}" id="domain-search-form" class="search-box-inline">
+                <i data-lucide="search"></i>
+                <input type="text" name="search" id="domain-search" placeholder="Search domains..." value="{{ search }}" onkeypress="if(event.key === 'Enter') { event.preventDefault(); this.form.submit(); }">
+                {% if sort_by %}
+                <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                {% endif %}
+                {% if sort_order %}
+                <input type="hidden" name="sort_order" value="{{ sort_order }}">
+                {% endif %}
+                {% if min_links %}
+                <input type="hidden" name="min_links" value="{{ min_links }}">
+                {% endif %}
+            </form>
+            <form method="GET" action="{{ url_for('main.domains') }}" id="min-links-form" class="min-links-filter">
+                <label for="min-links-input" style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                    <i data-lucide="filter" size="16" {% if min_links %}style="color: var(--primary-color);"{% endif %}></i>
+                    <span>Min links:</span>
+                </label>
+                <input type="number" name="min_links" id="min-links-input" placeholder="All" value="{{ min_links if min_links else '' }}" min="1" style="width: 80px; padding: 8px 12px; border: 1px solid {% if min_links %}var(--primary-color){% else %}var(--border-color){% endif %}; border-radius: var(--border-radius-sm); background: var(--bg-color); color: var(--text-color);" onchange="this.form.submit();">
+                {% if min_links %}
+                <a href="{{ url_for('main.domains', search=search, sort_by=sort_by, sort_order=sort_order) }}" class="btn btn-sm btn-secondary" style="padding: 8px 12px;" title="Clear filter">
+                    <i data-lucide="x" size="14"></i>
+                </a>
+                {% endif %}
+                {% if sort_by %}
+                <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                {% endif %}
+                {% if sort_order %}
+                <input type="hidden" name="sort_order" value="{{ sort_order }}">
+                {% endif %}
+                {% if search %}
+                <input type="hidden" name="search" value="{{ search }}">
+                {% endif %}
+            </form>
+        </div>
     </div>
     
     {% if domains %}
@@ -40,7 +66,7 @@
                 <thead>
                     <tr>
                         <th>
-                            <a href="{{ url_for('main.domains', sort_by='domain', sort_order='asc' if sort_by == 'domain' and sort_order == 'desc' else 'desc', search=search, page=1) }}" class="sort-header {% if sort_by == 'domain' %}active{% endif %}" title="Sort by Domain">
+                            <a href="{{ url_for('main.domains', sort_by='domain', sort_order='asc' if sort_by == 'domain' and sort_order == 'desc' else 'desc', search=search, min_links=min_links, page=1) }}" class="sort-header {% if sort_by == 'domain' %}active{% endif %}" title="Sort by Domain">
                                 Domain
                                 {% if sort_by == 'domain' %}
                                     <i data-lucide="chevron-{{ 'down' if sort_order == 'desc' else 'up' }}" size="14"></i>
@@ -50,7 +76,7 @@
                             </a>
                         </th>
                         <th style="text-align: right;">
-                            <a href="{{ url_for('main.domains', sort_by='total', sort_order='asc' if sort_by == 'total' and sort_order == 'desc' else 'desc', search=search, page=1) }}" class="sort-header {% if sort_by == 'total' %}active{% endif %}" title="Sort by Number of Links">
+                            <a href="{{ url_for('main.domains', sort_by='total', sort_order='asc' if sort_by == 'total' and sort_order == 'desc' else 'desc', search=search, min_links=min_links, page=1) }}" class="sort-header {% if sort_by == 'total' %}active{% endif %}" title="Sort by Number of Links">
                                 Links
                                 {% if sort_by == 'total' %}
                                     <i data-lucide="chevron-{{ 'down' if sort_order == 'desc' else 'up' }}" size="14"></i>
@@ -60,7 +86,7 @@
                             </a>
                         </th>
                         <th>
-                            <a href="{{ url_for('main.domains', sort_by='success_rate', sort_order='asc' if sort_by == 'success_rate' and sort_order == 'desc' else 'desc', search=search, page=1) }}" class="sort-header {% if sort_by == 'success_rate' %}active{% endif %}" title="Sort by Success Rate">
+                            <a href="{{ url_for('main.domains', sort_by='success_rate', sort_order='asc' if sort_by == 'success_rate' and sort_order == 'desc' else 'desc', search=search, min_links=min_links, page=1) }}" class="sort-header {% if sort_by == 'success_rate' %}active{% endif %}" title="Sort by Success Rate">
                                 Success Rate
                                 {% if sort_by == 'success_rate' %}
                                     <i data-lucide="chevron-{{ 'down' if sort_order == 'desc' else 'up' }}" size="14"></i>
@@ -70,7 +96,7 @@
                             </a>
                         </th>
                         <th>
-                            <a href="{{ url_for('main.domains', sort_by='quality', sort_order='asc' if sort_by == 'quality' and sort_order == 'desc' else 'desc', search=search, page=1) }}" class="sort-header {% if sort_by == 'quality' %}active{% endif %}" title="Sort by Average Quality Score">
+                            <a href="{{ url_for('main.domains', sort_by='quality', sort_order='asc' if sort_by == 'quality' and sort_order == 'desc' else 'desc', search=search, min_links=min_links, page=1) }}" class="sort-header {% if sort_by == 'quality' %}active{% endif %}" title="Sort by Average Quality Score">
                                 Avg Quality
                                 {% if sort_by == 'quality' %}
                                     <i data-lucide="chevron-{{ 'down' if sort_order == 'desc' else 'up' }}" size="14"></i>
@@ -184,6 +210,18 @@
     gap: var(--spacing-xl);
     padding: var(--spacing-md) var(--spacing-lg);
     margin-bottom: var(--spacing-lg);
+}
+
+.filter-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.min-links-filter {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
 }
 
 .stat-group {
@@ -325,6 +363,20 @@
     .domains-overview {
         flex-direction: column;
         align-items: stretch;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-sm);
+    }
+    
+    .min-links-filter {
+        width: 100%;
+    }
+    
+    .min-links-filter input {
+        flex: 1;
     }
     
     .search-box {

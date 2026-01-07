@@ -253,12 +253,21 @@ def domains():
     sort_by = request.args.get('sort_by', 'count', type=str)
     sort_order = request.args.get('sort_order', 'desc', type=str)
     search = request.args.get('search', type=str)
+    min_links_arg = request.args.get('min_links', type=str)
+    min_links = int(min_links_arg) if min_links_arg and min_links_arg.strip() else None
     
     session = create_session()
     try:
         stats_query = StatisticsQuery(session)
         # Get domain stats with quality metrics (no limit to show all domains)
         domains_list = stats_query.get_domain_stats(limit=10000)
+        
+        # Apply minimum links cutoff filter if provided
+        if min_links is not None:
+            domains_list = [
+                d for d in domains_list 
+                if d['total'] >= min_links
+            ]
         
         # Apply search filter if provided
         if search and search.strip():
@@ -306,6 +315,8 @@ def domains():
             filters['sort_by'] = sort_by
         if sort_order and sort_order.strip():
             filters['sort_order'] = sort_order
+        if min_links is not None:
+            filters['min_links'] = min_links
         
         return render_template('domains.html', 
                              domains=paginated_domains,
@@ -313,6 +324,7 @@ def domains():
                              sort_by=sort_by,
                              sort_order=sort_order,
                              search=search or '',
+                             min_links=min_links,
                              filters=filters)
     finally:
         session.close()

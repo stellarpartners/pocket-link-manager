@@ -4,8 +4,15 @@
 
 {% block content %}
 <div class="link-detail">
-    <div class="breadcrumb">
-        <a href="{{ back_url }}"><i data-lucide="chevron-left"></i> Back</a>
+    <div class="breadcrumb-header">
+        <div class="breadcrumb">
+            <a href="{{ back_url }}"><i data-lucide="chevron-left"></i> Back</a>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('main.add_link') }}" class="btn btn-primary">
+                <i data-lucide="plus"></i> Add New Link
+            </a>
+        </div>
     </div>
 
     <div class="link-header-section">
@@ -43,7 +50,7 @@
             {% if crawl_result and crawl_result.final_url %}
             <a href="{{ crawl_result.final_url }}" target="_blank" class="btn btn-primary btn-lg"><i data-lucide="external-link"></i> Visit Final</a>
             {% endif %}
-            <button type="button" class="btn btn-secondary btn-lg" id="refresh-metadata-btn" onclick="refreshMetadata({{ link.id }}, this)">
+            <button type="button" class="btn btn-secondary btn-lg" id="refresh-metadata-btn" data-link-id="{{ link.id }}">
                 <i data-lucide="refresh-cw" class="refresh-icon"></i> Refresh from URL
             </button>
             {% if link.pocket_status != 'archive' %}
@@ -56,7 +63,7 @@
             {% endif %}
         </div>
         <div class="action-group">
-            <button type="button" id="convert-to-markdown-btn-top" class="btn btn-obsidian btn-lg" onclick="convertToMarkdown({{ link.id }}, this)">
+            <button type="button" id="convert-to-markdown-btn-top" class="btn btn-obsidian btn-lg" data-link-id="{{ link.id }}">
                 <i data-lucide="refresh-cw" class="convert-icon"></i>
                 <span class="convert-btn-text">{{ 'Sync to Obsidian' if content_extraction and content_extraction.markdown_file_path else 'Extract & Sync to Obsidian' }}</span>
                 <span class="convert-btn-spinner" style="display: none;">Syncing...</span>
@@ -214,7 +221,7 @@
                 </div>
 
                 <div class="card-actions">
-                    <button type="button" id="convert-to-markdown-btn-bottom" class="btn btn-obsidian" onclick="convertToMarkdown({{ link.id }}, this)">
+                    <button type="button" id="convert-to-markdown-btn-bottom" class="btn btn-obsidian" data-link-id="{{ link.id }}">
                         <i data-lucide="refresh-cw" class="convert-icon"></i>
                         <span class="convert-btn-text">{{ 'Update Content & Sync' if content_extraction else 'Extract Content & Sync' }}</span>
                         <span class="convert-btn-spinner" style="display: none;">Syncing...</span>
@@ -293,7 +300,6 @@
                     <h3><i data-lucide="trash-2"></i> Delete</h3>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted small" style="margin-bottom: var(--spacing-md);">Once deleted, a link cannot be recovered.</p>
                     <form method="POST" action="{{ url_for('main.delete_link', link_id=link.id) }}" onsubmit="return confirm('Delete this link forever?');">
                         <input type="hidden" name="next" value="{{ back_url }}">
                         <button type="submit" class="btn btn-danger btn-sm" style="width: 100%;">
@@ -307,8 +313,15 @@
 </div>
 
 <style>
-.breadcrumb {
+.breadcrumb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: var(--spacing-xl);
+}
+
+.breadcrumb {
+    margin-bottom: 0;
 }
 
 .breadcrumb a {
@@ -717,6 +730,20 @@ a .url-row:hover {
 }
 
 @media (max-width: 1024px) {
+    .breadcrumb-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+    
+    .breadcrumb-header .header-actions {
+        width: 100%;
+    }
+    
+    .breadcrumb-header .header-actions .btn {
+        width: 100%;
+    }
+    
     .link-content-layout {
         grid-template-columns: 1fr;
     }
@@ -834,6 +861,37 @@ document.addEventListener('DOMContentLoaded', function() {
         emptyTags.style.cursor = 'pointer';
         emptyTags.addEventListener('click', function() {
             tagInput.focus();
+        });
+    }
+
+    // Refresh metadata and convert to markdown event listeners
+    const refreshBtn = document.getElementById('refresh-metadata-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            const linkId = this.getAttribute('data-link-id');
+            if (typeof refreshMetadata === 'function') {
+                refreshMetadata(linkId, this);
+            }
+        });
+    }
+
+    const convertTopBtn = document.getElementById('convert-to-markdown-btn-top');
+    if (convertTopBtn) {
+        convertTopBtn.addEventListener('click', function() {
+            const linkId = this.getAttribute('data-link-id');
+            if (typeof convertToMarkdown === 'function') {
+                convertToMarkdown(linkId, this);
+            }
+        });
+    }
+
+    const convertBottomBtn = document.getElementById('convert-to-markdown-btn-bottom');
+    if (convertBottomBtn) {
+        convertBottomBtn.addEventListener('click', function() {
+            const linkId = this.getAttribute('data-link-id');
+            if (typeof convertToMarkdown === 'function') {
+                convertToMarkdown(linkId, this);
+            }
         });
     }
 });
