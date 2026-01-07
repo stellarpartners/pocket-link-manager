@@ -2,6 +2,41 @@
 
 A comprehensive toolkit for extracting, crawling, processing, and managing Pocket saved articles. Transform your Pocket export into a searchable, organized knowledge base with web interface, content extraction, and export capabilities.
 
+## 🚨 Pocket Has Shut Down - We're Here to Help
+
+**Important Update**: As of 2025, [Pocket has been shut down](https://getpocket.com/home) by Mozilla. After careful consideration, Mozilla made the difficult decision to phase out Pocket, including the Pocket Web, Android, iOS, and macOS apps, as well as browser extensions.
+
+### What This Means for Pocket Users
+
+If you've been using Pocket to save articles and manage your reading list, you now need a way to:
+- **Preserve your saved articles** before they're lost
+- **Export your Pocket data** while you still can
+- **Migrate to a new system** for managing your reading list
+- **Maintain access** to your curated content collection
+
+### How Pocket Link Manager Helps
+
+This tool was designed specifically to help Pocket users transition smoothly:
+
+1. **Export Your Data**: Import your Pocket export CSV files into a local, self-hosted database
+2. **Preserve Your Collection**: Keep all your saved links, tags, and metadata safe and accessible
+3. **Crawl & Verify**: Automatically check which links still work and track redirects
+4. **Search & Organize**: Browse and search your entire collection with advanced filtering
+5. **Export Anywhere**: Convert your Pocket data to CSV, JSON, or Markdown for use in other tools
+6. **Obsidian Integration**: Generate Obsidian-ready markdown files for knowledge management
+7. **Self-Hosted**: Your data stays on your machine - no cloud dependencies
+
+### Quick Migration Steps
+
+1. **Export from Pocket** (if still available) - Download your Pocket data export
+2. **Import to Pocket Link Manager** - Use our import tools to bring your data in
+3. **Crawl & Verify** - Check which links are still accessible
+4. **Organize & Export** - Use the web interface to organize and export to your preferred format
+
+**Your Pocket data is valuable** - don't let it disappear. This tool helps you take control of your reading list and preserve your curated content collection.
+
+---
+
 ## Features
 
 ### 🔍 **Web Interface**
@@ -61,6 +96,20 @@ A comprehensive toolkit for extracting, crawling, processing, and managing Pocke
    ```
 
 ## Quick Start
+
+### 0. Export Your Pocket Data (If Still Available)
+
+**Important**: If you haven't already exported your Pocket data, try to do so immediately. Pocket has been shut down, but export functionality may still be temporarily available.
+
+**If you already have a Pocket export**: Skip this step and proceed to importing your CSV file.
+
+**If you need to export from Pocket** (if still accessible):
+1. Visit [getpocket.com](https://getpocket.com) and try to log in
+2. Navigate to your account settings
+3. Look for the export/download option
+4. Download your Pocket data as CSV
+
+**Note**: If Pocket export is no longer available, you may need to use any previously downloaded exports or contact Mozilla support for assistance with data recovery.
 
 ### 1. Import Your Pocket Data
 
