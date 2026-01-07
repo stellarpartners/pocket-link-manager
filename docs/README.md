@@ -10,7 +10,35 @@ Start here if you're setting up for the first time:
 
 1. **[Installation Guide](../README.md#getting-started)** - Get up and running in 5 minutes
 2. **[First Import](../README.md#step-3-import-your-data)** - Bring your Pocket data in
-3. **[Web Interface Tour](../README.md#what-you-can-do)** - Learn what each section does
+3. **[Web Interface Tour](#visual-tour)** - Learn what each section does
+
+### Visual Tour
+
+Take a quick visual tour of the Pocket Link Manager interface:
+
+#### 1. Setup & Import
+![Setup Page](screenshots/01-setup-page.png)
+*The setup wizard guides you through importing your Pocket CSV export. Simply drag and drop your file or click to browse.*
+
+#### 2. Dashboard & Data Quality
+![Dashboard](screenshots/02-dashboard-data-quality.png)
+*Your main dashboard shows collection statistics, quality metrics, status code breakdowns, and top domains at a glance.*
+
+#### 3. Links Library
+![Links Page](screenshots/03-links-page.png)
+*Browse all your saved articles with powerful filtering, sorting, and bulk actions. Search by title, filter by domain, status, or tags.*
+
+#### 4. Tags Management
+![Tags Page](screenshots/04-tags-page.png)
+*Organize your collection with tags. View all tags, see how many articles each has, and quickly filter to specific topics.*
+
+#### 5. Export to Obsidian
+![Export Page](screenshots/05-export-page.png)
+*Export your links to Obsidian vaults with full content extraction. Configure export options and sync directly to your knowledge base.*
+
+#### 6. Link Details
+![Link Detail Page](screenshots/06-link-detail-page.png)
+*View comprehensive details for any link: metadata, crawl results, content extraction, tags, and quick actions for editing or exporting.*
 
 ### Migrating from Pocket?
 

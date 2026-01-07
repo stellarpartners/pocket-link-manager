@@ -37,7 +37,7 @@ Convert articles to markdown files with full content, not just links. Create you
 
 - A Pocket export file (CSV format)
 - Python 3.12 or newer installed
-- 5 minutes to set up
+- 2 minutes to set up
 
 ### Step 1: Get Your Pocket Data
 
@@ -48,37 +48,35 @@ Convert articles to markdown files with full content, not just links. Create you
 
 **Already have an export?** Perfect! Jump to Step 2.
 
-### Step 2: Install Pocket Link Manager
+### Step 2: Start Pocket Link Manager
 
-```bash
-# Clone or download this project
-git clone https://github.com/stellarpartners/pocket-link-manager.git
-cd pocket-link-manager
+**That's it!** Just double-click **`Start Here.bat`** and everything happens automatically:
 
-# Install (takes about 30 seconds)
-pip install -e .
+- ✅ Checks if Python is installed
+- ✅ Installs dependencies automatically
+- ✅ Initializes the database
+- ✅ Starts the web server
+- ✅ Opens your browser automatically
 
-# Set up the database
-python -c "from database.init_db import init_database; init_database()"
-```
+The browser will open to `http://127.0.0.1:5000` and you'll see the setup wizard.
 
 ### Step 3: Import Your Data
 
-```bash
-# Import your Pocket export
-python tools/import_full_dataset.py
-```
+1. **Upload your CSV file** - Drag and drop or click to browse
+2. **Watch the import progress** - See real-time updates as your data is imported
+3. **Done!** - You'll be automatically redirected to your dashboard
 
-The tool will process your CSV file and build a searchable database. For 10,000 articles, this takes about 2-3 minutes.
+![Setup Page](docs/screenshots/01-setup-page.png)
 
-### Step 4: Explore Your Collection
+The import process handles everything automatically. For 10,000 articles, this takes about 2-3 minutes.
 
-```bash
-# Start the web interface
-python run.py
-```
+### That's It!
 
-Open your browser to `http://127.0.0.1:5000` and explore your collection!
+You're now ready to explore your collection! The web interface lets you:
+- Browse and search all your saved articles
+- Filter by domain, tags, or status
+- Export to various formats
+- And much more!
 
 ---
 
@@ -88,7 +86,11 @@ Open your browser to `http://127.0.0.1:5000` and explore your collection!
 
 **Dashboard**: See your collection at a glance - total articles, unread count, quality metrics, top domains.
 
+![Dashboard](docs/screenshots/02-dashboard-data-quality.png)
+
 **Link Browser**: Scroll through all your saved articles with thumbnails and metadata. Sort by date, domain, or quality score.
+
+![Links Page](docs/screenshots/03-links-page.png)
 
 **Search**: Find any article instantly by searching titles and URLs. The search is fast, even with 20,000+ articles.
 
@@ -97,6 +99,8 @@ Open your browser to `http://127.0.0.1:5000` and explore your collection!
 ### 🏷️ Organize with Tags
 
 **Tag Browser**: See all your tags and how many articles each one has. Click any tag to see those articles.
+
+![Tags Page](docs/screenshots/04-tags-page.png)
 
 **Add & Remove Tags**: Manage tags individually or in bulk. Rename tags across your entire collection.
 
@@ -117,6 +121,8 @@ Open your browser to `http://127.0.0.1:5000` and explore your collection!
 **Export to CSV**: Download your filtered results as a spreadsheet. Great for sharing lists or further analysis.
 
 **Markdown Export**: Create markdown files perfect for Obsidian, Logseq, or any markdown-based note system.
+
+![Export Page](docs/screenshots/05-export-page.png)
 
 **JSON Export**: Export structured data for use in other applications or custom scripts.
 
@@ -169,6 +175,8 @@ Open your browser to `http://127.0.0.1:5000` and explore your collection!
 
 ## Understanding Your Dashboard
 
+![Dashboard](docs/screenshots/02-dashboard-data-quality.png)
+
 **Total Links**: How many articles you've saved over the years
 
 **Unread Count**: Articles you saved but haven't read yet
@@ -184,21 +192,27 @@ Open your browser to `http://127.0.0.1:5000` and explore your collection!
 
 **Top Domains**: Your most-saved websites - discover your reading patterns
 
+For detailed link information, click on any article to see the full detail page:
+
+![Link Detail Page](docs/screenshots/06-link-detail-page.png)
+
 ---
 
 ## Need Help?
 
 ### The Interface Won't Load
 
-1. Make sure you ran `python run.py`
+1. Make sure you double-clicked `Start Here.bat` and the server started successfully
 2. Check that port 5000 isn't being used by another app
-3. Try accessing `http://localhost:5000` instead
+3. Try accessing `http://127.0.0.1:5000` directly in your browser
+4. Check the console window for any error messages
 
 ### Import Failed
 
 1. Verify your CSV is from Pocket (check the columns)
-2. Make sure the database was initialized
-3. Check you have write permissions in the data folder
+2. Make sure the file is a valid CSV format
+3. Check the error message in the setup wizard for specific issues
+4. Try uploading the file again
 
 ### Links Not Working
 
@@ -206,7 +220,20 @@ Open your browser to `http://127.0.0.1:5000` and explore your collection!
 2. The crawler is respectful and slow - it takes time
 3. You can adjust crawler settings in the script
 
-### Want to Customize?
+### Advanced Usage
+
+If you prefer command-line setup or want to customize:
+
+```bash
+# Install dependencies
+pip install -e .
+
+# Initialize database
+python -c "from database.init_db import init_database; init_database()"
+
+# Start server
+python run.py
+```
 
 Check out the [Technical Documentation](docs/README.md) for:
 - Database structure and queries
@@ -256,8 +283,9 @@ Built with ❤️ for people who value their reading lists.
 ## Next Steps
 
 1. **[Export your Pocket data](#step-1-get-your-pocket-data)** if you haven't already
-2. **[Install and import](#step-2-install-pocket-link-manager)** your collection  
-3. **[Explore the interface](#step-4-explore-your-collection)** and organize your links
-4. **[Share your experience](https://github.com/stellarpartners/pocket-link-manager/issues)** - help us improve!
+2. **[Double-click Start Here.bat](#step-2-start-pocket-link-manager)** - it's that simple!
+3. **[Upload your CSV](#step-3-import-your-data)** through the web interface
+4. **[Explore your collection](#thats-it)** and organize your links
+5. **[Share your experience](https://github.com/stellarpartners/pocket-link-manager/issues)** - help us improve!
 
 **Questions?** Check the [Documentation](docs/README.md) or [open an issue](https://github.com/stellarpartners/pocket-link-manager/issues).
