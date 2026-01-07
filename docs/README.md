@@ -17,27 +17,27 @@ Start here if you're setting up for the first time:
 Take a quick visual tour of the Pocket Link Manager interface:
 
 #### 1. Setup & Import
-![Setup Page](docs/screenshots/01-setup-page.png)
+![Setup Page](screenshots/01-setup-page.png)
 *The setup wizard guides you through importing your Pocket CSV export. Simply drag and drop your file or click to browse.*
 
 #### 2. Dashboard & Data Quality
-![Dashboard](docs/screenshots/02-dashboard-data-quality.png)
+![Dashboard](screenshots/02-dashboard-data-quality.png)
 *Your main dashboard shows collection statistics, quality metrics, status code breakdowns, and top domains at a glance.*
 
 #### 3. Links Library
-![Links Page](docs/screenshots/03-links-page.png)
+![Links Page](screenshots/03-links-page.png)
 *Browse all your saved articles with powerful filtering, sorting, and bulk actions. Search by title, filter by domain, status, or tags.*
 
 #### 4. Tags Management
-![Tags Page](docs/screenshots/04-tags-page.png)
+![Tags Page](screenshots/04-tags-page.png)
 *Organize your collection with tags. View all tags, see how many articles each has, and quickly filter to specific topics.*
 
 #### 5. Export to Obsidian
-![Export Page](docs/screenshots/05-export-page.png)
+![Export Page](screenshots/05-export-page.png)
 *Export your links to Obsidian vaults with full content extraction. Configure export options and sync directly to your knowledge base.*
 
 #### 6. Link Details
-![Link Detail Page](docs/screenshots/06-link-detail-page.png)
+![Link Detail Page](screenshots/06-link-detail-page.png)
 *View comprehensive details for any link: metadata, crawl results, content extraction, tags, and quick actions for editing or exporting.*
 
 ### Migrating from Pocket?

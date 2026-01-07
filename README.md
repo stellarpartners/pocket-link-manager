@@ -48,7 +48,7 @@ Convert articles to markdown files with full content, not just links. Create you
 
 **Already have an export?** Perfect! Jump to Step 2.
 
-### Step 2: Start Pocket Link Manager
+### Step 2: Install Pocket Link Manager
 
 **That's it!** Just double-click **`Start Here.bat`** and everything happens automatically:
 
@@ -283,7 +283,7 @@ Built with ❤️ for people who value their reading lists.
 ## Next Steps
 
 1. **[Export your Pocket data](#step-1-get-your-pocket-data)** if you haven't already
-2. **[Double-click Start Here.bat](#step-2-start-pocket-link-manager)** - it's that simple!
+2. **[Double-click Start Here.bat](#step-2-install-pocket-link-manager)** - it's that simple!
 3. **[Upload your CSV](#step-3-import-your-data)** through the web interface
 4. **[Explore your collection](#thats-it)** and organize your links
 5. **[Share your experience](https://github.com/stellarpartners/pocket-link-manager/issues)** - help us improve!
