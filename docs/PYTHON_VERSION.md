@@ -61,7 +61,11 @@ This will verify your Python version meets the requirements and provide recommen
 To test installation:
 
 ```bash
-pip install -r requirements.txt
+# Install from pyproject.toml
+pip install -e .
+
+# Or with development dependencies
+pip install -e ".[dev]"
 ```
 
 All dependencies should install successfully on Python 3.12+.
@@ -80,7 +84,7 @@ Python 3.13 includes several performance improvements:
 If upgrading from Python 3.8-3.11:
 
 1. Update Python to 3.12+ or 3.13+
-2. Reinstall dependencies: `pip install -r requirements.txt`
+2. Reinstall dependencies: `pip install -e .` or `pip install -e ".[dev]"`
 3. Test the application: `python run.py`
 4. Watch for deprecation warnings (non-breaking)
 

@@ -46,4 +46,4 @@ Install with:
 pip install -r scripts/utils/requirements_crawler.txt
 ```
 
-Note: These are in addition to the main project requirements in `requirements.txt`.
+Note: These are in addition to the main project dependencies installed via `pip install -e .` (from `pyproject.toml`).
